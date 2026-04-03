@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forca Distribuida | Partida</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel hero compact-hero">
+        <p class="eyebrow">Sala de jogo</p>
+        <h1>Forca Distribuida</h1>
+        <p class="subtitle">Tela dedicada da partida em tempo real.</p>
+      </section>
+
+      <section class="panel game-shell">
+        <div class="game-header">
+          <div>
+            <h2 id="game-title">Carregando partida</h2>
+            <p id="game-subtitle">Restaurando sua sessao.</p>
+          </div>
+          <div class="badge" id="server-badge">Game</div>
+        </div>
+
+        <div class="turn-banner waiting" id="turn-banner">Conectando ao servidor da partida.</div>
+
+        <div class="status-grid">
+          <div>
+            <h3>Palavra</h3>
+            <p class="word" id="masked-word">_ _ _ _ _</p>
+            <p id="theme">Tema: aguardando dados da partida.</p>
+            <button type="button" class="secondary-button" id="hint-toggle">Pedir dica</button>
+            <p id="hint" hidden>Dica: aguardando dados da partida.</p>
+          </div>
+          <div>
+            <h3>Letras erradas</h3>
+            <p id="wrong-letters">Nenhuma</p>
+          </div>
+        </div>
+
+        <div class="hangman-area">
+          <div class="gallows">
+            <div class="pole"></div>
+            <div class="beam"></div>
+            <div class="rope"></div>
+            <div class="part head" data-part="cabeca"></div>
+            <div class="part body" data-part="tronco"></div>
+            <div class="part arm-right" data-part="braco-direito"></div>
+            <div class="part arm-left" data-part="braco-esquerdo"></div>
+            <div class="part leg-right" data-part="perna-direita"></div>
+            <div class="part leg-left" data-part="perna-esquerda"></div>
+          </div>
+
+          <div class="players" id="players"></div>
+        </div>
+
+        <form id="guess-form" class="guess-form">
+          <label for="guess-input">Digite uma letra</label>
+          <div class="guess-row">
+            <input id="guess-input" maxlength="1" autocomplete="off" />
+            <button type="submit">Enviar</button>
+          </div>
+        </form>
+
+        <div class="game-actions">
+          <div class="monitor-links"><a class="secondary-link" href="/monitor.html">Abrir monitor</a><a class="secondary-link" href="/">Voltar ao lobby</a></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Eventos</h2>
+        <ul id="event-log" class="event-log"></ul>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/game.js"></script>
+  </body>
+</html>

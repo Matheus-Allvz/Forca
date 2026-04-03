@@ -1,0 +1,42 @@
+services:
+  controller:
+    container_name: controller
+    build:
+      context: .
+      dockerfile: controller/Dockerfile
+    environment:
+      PORT: ${CONTROLLER_PORT}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+    ports:
+      - "${CONTROLLER_PORT}:${CONTROLLER_PORT}"
+    depends_on:
+      - game-server-1
+      - game-server-2
+
+  game-server-1:
+    container_name: game-server-1
+    build:
+      context: .
+      dockerfile: game-server/Dockerfile
+    environment:
+      PORT: ${GAME_SERVER_1_PORT}
+      SERVER_ID: ${GAME_SERVER_1_ID}
+      CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
+      PUBLIC_SERVER_URL: ${GAME_SERVER_1_PUBLIC_URL}
+      INTERNAL_SERVER_URL: ${GAME_SERVER_1_INTERNAL_URL}
+    ports:
+      - "${GAME_SERVER_1_PORT}:${GAME_SERVER_1_PORT}"
+
+  game-server-2:
+    container_name: game-server-2
+    build:
+      context: .
+      dockerfile: game-server/Dockerfile
+    environment:
+      PORT: ${GAME_SERVER_2_PORT}
+      SERVER_ID: ${GAME_SERVER_2_ID}
+      CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
+      PUBLIC_SERVER_URL: ${GAME_SERVER_2_PUBLIC_URL}
+      INTERNAL_SERVER_URL: ${GAME_SERVER_2_INTERNAL_URL}
+    ports:
+      - "${GAME_SERVER_2_PORT}:${GAME_SERVER_2_PORT}"

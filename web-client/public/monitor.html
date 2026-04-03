@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forca Distribuida | Monitor</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="layout monitor-layout">
+      <section class="panel hero compact-hero">
+        <div class="monitor-header-row">
+          <div>
+            <p class="eyebrow">Controller</p>
+            <h1>Painel de Monitoramento</h1>
+            <p class="subtitle">Visao em tempo real da fila, dos servidores, das sessoes e das partidas.</p>
+          </div>
+          <a class="secondary-link" href="/">Voltar ao lobby</a>
+        </div>
+      </section>
+
+      <section class="monitor-summary" id="summary-cards"></section>
+
+      <section class="panel monitor-panel">
+        <div class="monitor-section-header">
+          <h2>Servidores</h2>
+          <p id="last-refresh">Atualizando...</p>
+        </div>
+        <div class="table-wrap">
+          <table class="monitor-table">
+            <thead>
+              <tr>
+                <th>Servidor</th>
+                <th>Status</th>
+                <th>Jogos ativos</th>
+                <th>Ultimo heartbeat</th>
+                <th>URL publica</th>
+              </tr>
+            </thead>
+            <tbody id="servers-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="monitor-grid">
+        <section class="panel monitor-panel">
+          <h2>Fila de espera</h2>
+          <div class="table-wrap">
+            <table class="monitor-table">
+              <thead>
+                <tr>
+                  <th>Posicao</th>
+                  <th>Jogador</th>
+                  <th>Player ID</th>
+                </tr>
+              </thead>
+              <tbody id="queue-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel monitor-panel">
+          <h2>Partidas</h2>
+          <div class="table-wrap">
+            <table class="monitor-table">
+              <thead>
+                <tr>
+                  <th>Game ID</th>
+                  <th>Servidor</th>
+                  <th>Status</th>
+                  <th>Jogadores</th>
+                </tr>
+              </thead>
+              <tbody id="games-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel monitor-panel">
+        <h2>Sessoes</h2>
+        <div class="table-wrap">
+          <table class="monitor-table">
+            <thead>
+              <tr>
+                <th>Jogador</th>
+                <th>Status</th>
+                <th>Game ID</th>
+                <th>Servidor</th>
+                <th>Criada em</th>
+              </tr>
+            </thead>
+            <tbody id="sessions-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/monitor.js"></script>
+  </body>
+</html>

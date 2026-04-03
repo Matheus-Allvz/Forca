@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forca Distribuida | Lobby</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel hero">
+        <p class="eyebrow">Sistemas Distribuidos</p>
+        <h1>Forca Distribuida</h1>
+        <p class="subtitle">Entre no lobby, aguarde o pareamento e seja redirecionado para a tela dedicada da partida.</p>
+      </section>
+
+      <section class="panel lobby-shell">
+        <div class="game-header">
+          <div>
+            <h2>Lobby</h2>
+            <p id="lobby-subtitle">Conecte-se ao controller para procurar um adversario.</p>
+          </div>
+          <div class="monitor-links"><a class="secondary-link" href="/monitor.html">Abrir monitor</a><div class="badge" id="lobby-badge">Lobby</div></div>
+        </div>
+
+        <div class="turn-banner waiting" id="lobby-banner">Aguardando entrada no jogo.</div>
+
+        <div class="lobby-grid">
+          <form id="join-form" class="join-card">
+            <label for="player-name">Seu nome</label>
+            <input id="player-name" name="player-name" maxlength="24" placeholder="Ex.: Arthur" required />
+            <button type="submit">Conectar</button>
+          </form>
+
+          <div class="queue-card">
+            <h3>Fila</h3>
+            <p id="queue-status">Nenhum jogador conectado ainda.</p>
+            <p id="queue-position"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Eventos</h2>
+        <ul id="event-log" class="event-log"></ul>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/lobby.js"></script>
+  </body>
+</html>
