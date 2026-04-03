@@ -1,4 +1,4 @@
-# Forca Distribuida
+﻿# Forca Distribuida
 
 Projeto em Node.js para demonstrar uma arquitetura distribuida do jogo da forca com:
 
@@ -43,21 +43,37 @@ Principais grupos de variaveis:
 - `GAME_SERVER_PORT`, `GAME_SERVER_ID`, `GAME_SERVER_PUBLIC_URL`, `GAME_SERVER_INTERNAL_URL`, `CONTROLLER_URL`
 - `GAME_SERVER_1_*` e `GAME_SERVER_2_*` para o `docker compose`
 
-## Acesso de outros computadores
+## Exemplo para `forca.arthurcmarques.com.br`
 
-O IP atual da maquina host nesta rede e `10.42.27.21`.
+Use o dominio principal para o controller e um subdominio por servidor de jogo:
 
-Use estas URLs nos outros computadores da mesma rede:
+- Lobby e monitor: `https://forca.arthurcmarques.com.br`
+- Servidor 1: `https://gs1.arthurcmarques.com.br`
+- Servidor 2: `https://gs2.arthurcmarques.com.br`
 
-- Lobby: `http://10.42.27.21:3000`
-- Tela de jogo: `http://10.42.27.21:3000/game.html`
-- Monitor do controller: `http://10.42.27.21:3000/monitor.html`
+Exemplo de `.env`:
 
-Se outro computador nao conseguir acessar, verifique:
+```env
+CONTROLLER_PORT=3000
+PUBLIC_BASE_URL=https://forca.arthurcmarques.com.br
+CONTROLLER_INTERNAL_URL=http://controller:3000
 
-1. Se ambos estao na mesma rede.
-2. Se o firewall do Windows liberou as portas `3000`, `4001` e `4002`.
-3. Se os containers foram recriados depois da mudanca do `.env`.
+GAME_SERVER_1_PORT=4001
+GAME_SERVER_1_ID=game-server-1
+GAME_SERVER_1_PUBLIC_URL=https://gs1.arthurcmarques.com.br
+GAME_SERVER_1_INTERNAL_URL=http://game-server-1:4001
+
+GAME_SERVER_2_PORT=4002
+GAME_SERVER_2_ID=game-server-2
+GAME_SERVER_2_PUBLIC_URL=https://gs2.arthurcmarques.com.br
+GAME_SERVER_2_INTERNAL_URL=http://game-server-2:4002
+```
+
+No `nginx` e no `cloudflared`, publique:
+
+- `forca.arthurcmarques.com.br` apontando para o controller
+- `gs1.arthurcmarques.com.br` apontando para `game-server-1`
+- `gs2.arthurcmarques.com.br` apontando para `game-server-2`
 
 ## Rodando localmente com Docker
 
@@ -67,15 +83,15 @@ docker compose up --build
 
 Acesso local na propria maquina:
 
-- Lobby: `http://localhost:3000`
-- Tela de jogo: `http://localhost:3000/game.html`
-- Monitor do controller: `http://localhost:3000/monitor.html`
+- Lobby: `https://forca.arthurcmarques.com.br`
+- Tela de jogo: `https://forca.arthurcmarques.com.br/game.html`
+- Monitor do controller: `https://forca.arthurcmarques.com.br/monitor.html`
 
-Acesso remoto na rede:
+Acesso publico esperado:
 
-- Lobby: `http://10.42.27.21:3000`
-- Tela de jogo: `http://10.42.27.21:3000/game.html`
-- Monitor do controller: `http://10.42.27.21:3000/monitor.html`
+- Lobby: `https://forca.arthurcmarques.com.br`
+- Tela de jogo: `https://forca.arthurcmarques.com.br/game.html`
+- Monitor do controller: `https://forca.arthurcmarques.com.br/monitor.html`
 
 ## Rodando sem Docker
 
@@ -99,9 +115,9 @@ Exemplo no PowerShell:
 ```powershell
 $env:PORT=4002
 $env:SERVER_ID="game-server-2"
-$env:PUBLIC_SERVER_URL="http://10.42.27.21:4002"
+$env:PUBLIC_SERVER_URL="https://gs2.arthurcmarques.com.br"
 $env:INTERNAL_SERVER_URL="http://localhost:4002"
-$env:CONTROLLER_URL="http://10.42.27.21:3000"
+$env:CONTROLLER_URL="https://forca.arthurcmarques.com.br"
 node game-server/server.js
 ```
 
@@ -114,8 +130,76 @@ node game-server/server.js
 5. Mostre o cliente reconectando automaticamente ao novo servidor.
 6. Acesse `/monitor.html` para exibir observabilidade basica.
 
+## Como acrescentar novos servidores
+
+Para adicionar um novo servidor de jogo, repita o mesmo padrao dos servicos existentes.
+
+### 1. Acrescente variaveis no `.env`
+
+Exemplo para um terceiro servidor:
+
+```env
+GAME_SERVER_3_PORT=4003
+GAME_SERVER_3_ID=game-server-3
+GAME_SERVER_3_PUBLIC_URL=https://gs3.arthurcmarques.com.br
+GAME_SERVER_3_INTERNAL_URL=http://game-server-3:4003
+```
+
+### 2. Acrescente o servico no `docker-compose.yml`
+
+```yml
+  game-server-3:
+    container_name: game-server-3
+    build:
+      context: .
+      dockerfile: game-server/Dockerfile
+    environment:
+      PORT: ${GAME_SERVER_3_PORT}
+      SERVER_ID: ${GAME_SERVER_3_ID}
+      CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
+      PUBLIC_SERVER_URL: ${GAME_SERVER_3_PUBLIC_URL}
+      INTERNAL_SERVER_URL: ${GAME_SERVER_3_INTERNAL_URL}
+    ports:
+      - "${GAME_SERVER_3_PORT}:${GAME_SERVER_3_PORT}"
+```
+
+Tambem inclua o novo servico em `depends_on` do controller:
+
+```yml
+    depends_on:
+      - game-server-1
+      - game-server-2
+      - game-server-3
+```
+
+### 3. Publique o novo subdominio
+
+Crie e publique `gs3.arthurcmarques.com.br`:
+
+- no `nginx`, apontando para `127.0.0.1:4003`
+- no `cloudflared`, criando uma nova regra de ingress para esse hostname
+
+### 4. Recrie os containers
+
+```bash
+docker compose up -d --build
+```
+
+### Regras para novos servidores
+
+Cada novo servidor precisa ter:
+
+- uma porta unica
+- um `SERVER_ID` unico
+- um subdominio proprio
+- uma `INTERNAL_SERVER_URL` que aponte para o nome do servico Docker
+
+Sem isso, o controller nao consegue distribuir e migrar partidas corretamente.
+
 ## Observacoes
 
 - O controller mantem estado em memoria e snapshots das partidas, o que simplifica a demonstracao do failover.
 - Para alta disponibilidade real do controller, o proximo passo natural seria usar Redis/PostgreSQL para estado compartilhado e eleicao de lider.
 - O jogo esta modelado em turnos alternados; erro conta para o jogador que tentou a letra.
+
+
