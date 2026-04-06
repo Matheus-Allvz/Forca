@@ -201,5 +201,3 @@ Sem isso, o controller nao consegue distribuir e migrar partidas corretamente.
 - O controller mantem estado em memoria e snapshots das partidas, o que simplifica a demonstracao do failover.
 - Para alta disponibilidade real do controller, o proximo passo natural seria usar Redis/PostgreSQL para estado compartilhado e eleicao de lider.
 - O jogo esta modelado em turnos alternados; erro conta para o jogador que tentou a letra.
-
-

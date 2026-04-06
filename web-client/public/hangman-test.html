@@ -3,43 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forca Distribuida | Partida</title>
+    <title>Forca Distribuida | Teste da Forca</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <main class="layout">
       <section class="panel hero compact-hero">
-        <p class="eyebrow">Sala de jogo</p>
-        <h1>Forca Distribuida</h1>
-        <p class="subtitle">Tela dedicada da partida em tempo real.</p>
+        <p class="eyebrow">Laboratorio Visual</p>
+        <h1>Teste da Forca</h1>
+        <p class="subtitle">Pagina isolada para validar os estados do desenho da forca. Nao aparece em nenhum link da interface.</p>
       </section>
 
-      <section class="panel game-shell">
-        <div class="game-header">
+      <section class="panel monitor-panel">
+        <div class="monitor-section-header">
           <div>
-            <h2 id="game-title">Carregando partida</h2>
-            <p id="game-subtitle">Restaurando sua sessao.</p>
+            <h2>Estados</h2>
+            <p class="subtitle">Escolha a quantidade de erros para ver exatamente o que aparece.</p>
           </div>
-          <div class="badge" id="server-badge">Game</div>
+          <strong id="hangman-test-current">0 / 6 erros</strong>
         </div>
 
-        <div class="turn-banner waiting" id="turn-banner">Conectando ao servidor da partida.</div>
-
-        <div class="status-grid">
-          <div>
-            <h3>Palavra</h3>
-            <p class="word" id="masked-word">_ _ _ _ _</p>
-            <p id="theme">Tema: aguardando dados da partida.</p>
-            <button type="button" class="secondary-button" id="hint-toggle">Pedir dica</button>
-            <p id="hint" hidden>Dica: aguardando dados da partida.</p>
-          </div>
-          <div>
-            <h3>Letras erradas</h3>
-            <p id="wrong-letters">Nenhuma</p>
-          </div>
+        <div class="hangman-test-controls">
+          <input id="hangman-test-range" type="range" min="0" max="6" step="1" value="0" />
+          <div class="hangman-test-buttons" id="hangman-test-buttons"></div>
         </div>
+      </section>
 
-        <div class="hangman-area">
+      <section class="panel">
+        <div class="hangman-area hangman-test-area">
           <div class="gallows">
             <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Desenho da forca">
               <defs>
@@ -109,35 +100,24 @@
                 <path d="M212 289 Q220 294 228 288" fill="none" stroke="#1f252b" stroke-width="6" stroke-linecap="round" />
               </g>
             </svg>
-            <p class="gallows-caption" id="gallows-caption">Erros visiveis: 0/6</p>
+            <p class="gallows-caption" id="hangman-test-caption">Erros visiveis: 0/6</p>
           </div>
 
-          <div class="players" id="players"></div>
-        </div>
-
-        <form id="guess-form" class="guess-form">
-          <label for="guess-input">Digite uma letra</label>
-          <div class="guess-row">
-            <input id="guess-input" maxlength="1" autocomplete="off" />
-            <button type="submit">Enviar</button>
-          </div>
-        </form>
-
-        <div class="game-actions">
-          <div class="monitor-links">
-            <button type="button" class="secondary-button danger-button" id="surrender-button">Desistir da partida</button>
-            <div class="post-game-actions hidden" id="post-game-actions">
-              <button type="button" class="secondary-button" id="play-again-button">Jogar novamente</button>
-              <button type="button" class="secondary-button" id="return-lobby-button">Voltar ao lobby</button>
-            </div>
-            <a class="secondary-link" href="/monitor.html">Abrir monitor</a>
-          </div>
+          <section class="panel hangman-test-panel">
+            <h3>Mapa de pecas</h3>
+            <ol class="hangman-test-list">
+              <li>1 erro: cabeca</li>
+              <li>2 erros: tronco</li>
+              <li>3 erros: braco direito</li>
+              <li>4 erros: braco esquerdo</li>
+              <li>5 erros: perna direita</li>
+              <li>6 erros: perna esquerda</li>
+            </ol>
+          </section>
         </div>
       </section>
-
     </main>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/game.js"></script>
+    <script src="/hangman-test.js"></script>
   </body>
 </html>

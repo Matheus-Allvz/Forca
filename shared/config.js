@@ -1,5 +1,6 @@
 const REGRAS_DO_JOGO = {
   maxErrors: 6,
+  turnTimeLimitMs: 20_000,
   reconnectGraceMs: 30_000,
   serverHeartbeatTimeoutMs: 15_000,
   failoverPollMs: 5_000

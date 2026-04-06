@@ -28,21 +28,45 @@
         <div class="lobby-grid">
           <form id="join-form" class="join-card">
             <label for="player-name">Seu nome</label>
-            <input id="player-name" name="player-name" maxlength="24" placeholder="Ex.: Arthur" required />
-            <button type="submit">Conectar</button>
+            <input id="player-name" name="player-name" maxlength="24" required />
+            <div class="stack-actions">
+              <button type="submit">Conectar</button>
+              <button type="button" class="secondary-button" id="leave-queue-button" disabled>Sair da fila</button>
+            </div>
           </form>
 
           <div class="queue-card">
             <h3>Fila</h3>
-            <p id="queue-status">Nenhum jogador conectado ainda.</p>
+            <p id="public-queue-status">Consultando fila publica...</p>
+            <p id="queue-status">Conecte-se para entrar na fila de pareamento.</p>
             <p id="queue-position"></p>
           </div>
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Eventos</h2>
-        <ul id="event-log" class="event-log"></ul>
+      <section class="panel ranking-panel">
+        <div class="monitor-section-header">
+          <div>
+            <h2>Ranking</h2>
+            <p id="ranking-subtitle">Jogadores com mais vitorias no servidor.</p>
+          </div>
+          <p id="ranking-last-update">Atualizando...</p>
+        </div>
+        <div class="table-wrap">
+          <table class="monitor-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Jogador</th>
+                <th>Vitorias</th>
+                <th>Derrotas</th>
+                <th>Partidas</th>
+                <th>Aproveitamento</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+          </table>
+        </div>
       </section>
     </main>
 

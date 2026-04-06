@@ -16,10 +16,11 @@ const campoPalpite = document.querySelector("#guess-input");
 const listaEventos = document.querySelector("#event-log");
 
 const chaveSessao = "forca-distribuida-session";
-const socketController = io();
+const socketController = io({ autoConnect: false });
 let socketPartida = null;
 let sessao = carregarSessao();
 let estadoAtual = null;
+const statusLobbyDesconectado = "Conecte-se para entrar na fila de pareamento.";
 
 function carregarSessao() {
   try {
@@ -35,6 +36,9 @@ function salvarSessao(proximaSessao) {
 }
 
 function adicionarLog(mensagem) {
+  if (!listaEventos) {
+    return;
+  }
   const item = document.createElement("li");
   item.textContent = `[${new Date().toLocaleTimeString()}] ${mensagem}`;
   listaEventos.prepend(item);
@@ -291,6 +295,20 @@ socketController.on("match-found", (payload) => {
   conectarNaPartida(payload);
 });
 
+socketController.on("join-error", ({ message }) => {
+  renderizarEstadoLobby({
+    titulo: "Painel da partida",
+    subtitulo: "Escolha um nome diferente para procurar um adversario.",
+    textoFila: message || "Esse nome ja esta em uso.",
+    textoPosicao: "",
+    selo: "Lobby",
+    tipoFaixa: "waiting",
+    mensagemFaixa: "Nao foi possivel entrar na fila.",
+    conectado: false
+  });
+  adicionarLog(message || "Tentativa de entrada rejeitada por nome duplicado.");
+});
+
 formularioPalpite.addEventListener("submit", (evento) => {
   evento.preventDefault();
   const letra = campoPalpite.value.trim().toLowerCase();
@@ -309,7 +327,7 @@ formularioPalpite.addEventListener("submit", (evento) => {
 renderizarEstadoLobby({
   titulo: "Painel da partida",
   subtitulo: "Entre com seu nome para procurar um adversario.",
-  textoFila: "Nenhum jogador conectado ainda.",
+  textoFila: statusLobbyDesconectado,
   textoPosicao: "",
   selo: "Lobby",
   tipoFaixa: "waiting",
@@ -317,4 +335,5 @@ renderizarEstadoLobby({
   conectado: false
 });
 renderizarForca([]);
+socketController.connect();
 restaurarSessaoExistente();
