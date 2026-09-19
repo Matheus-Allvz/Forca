@@ -5,7 +5,7 @@ Projeto em Node.js para demonstrar uma arquitetura distribuida do jogo da forca 
 - `controller` centralizando fila, pareamento e descoberta dos servidores.
 - `game-server` executando partidas independentes via socket.
 - `web-client` servido pelo controller.
-- `docker-compose` com um controller e dois servidores de jogo.
+- `docker-compose` com um controller e quatro servidores de jogo.
 - configuracao centralizada via `.env`.
 - failover de partida entre servidores com snapshot mantido no controller.
 
@@ -23,7 +23,7 @@ Projeto em Node.js para demonstrar uma arquitetura distribuida do jogo da forca 
 
 - Cada partida possui exatamente 2 jogadores.
 - Um terceiro jogador gera outra espera e depois outra partida, dando ideia de escalabilidade.
-- Dois servidores de jogo sao iniciados em containers separados.
+- Quatro servidores de jogo sao iniciados em containers separados.
 - Comunicacao cliente-servidor via socket.
 - Reconexao em ate 30 segundos; apos isso, o adversario vence.
 - Fila amigavel com feedback de posicao.
@@ -38,42 +38,25 @@ O projeto usa um arquivo `.env` na raiz. Um exemplo completo esta em `.env.examp
 
 Principais grupos de variaveis:
 
-- `HOST_IP`
 - `CONTROLLER_PORT`, `PUBLIC_BASE_URL`, `CONTROLLER_INTERNAL_URL`
 - `GAME_SERVER_PORT`, `GAME_SERVER_ID`, `GAME_SERVER_PUBLIC_URL`, `GAME_SERVER_INTERNAL_URL`, `CONTROLLER_URL`
-- `GAME_SERVER_1_*` e `GAME_SERVER_2_*` para o `docker compose`
+- `GAME_SERVER_1_*` ate `GAME_SERVER_4_*` para o `docker compose`
 
-## Exemplo para `forca.arthurcmarques.com.br`
+Crie o arquivo de configuracao antes de iniciar (PowerShell):
 
-Use o dominio principal para o controller e um subdominio por servidor de jogo:
-
-- Lobby e monitor: `https://forca.arthurcmarques.com.br`
-- Servidor 1: `https://gs1.arthurcmarques.com.br`
-- Servidor 2: `https://gs2.arthurcmarques.com.br`
-
-Exemplo de `.env`:
-
-```env
-CONTROLLER_PORT=3000
-PUBLIC_BASE_URL=https://forca.arthurcmarques.com.br
-CONTROLLER_INTERNAL_URL=http://controller:3000
-
-GAME_SERVER_1_PORT=4001
-GAME_SERVER_1_ID=game-server-1
-GAME_SERVER_1_PUBLIC_URL=https://gs1.arthurcmarques.com.br
-GAME_SERVER_1_INTERNAL_URL=http://game-server-1:4001
-
-GAME_SERVER_2_PORT=4002
-GAME_SERVER_2_ID=game-server-2
-GAME_SERVER_2_PUBLIC_URL=https://gs2.arthurcmarques.com.br
-GAME_SERVER_2_INTERNAL_URL=http://game-server-2:4002
+```powershell
+Copy-Item .env.example .env
 ```
 
-No `nginx` e no `cloudflared`, publique:
+O exemplo ja esta configurado para uso na propria maquina. As URLs publicas usam
+`http://localhost`, com o controller na porta 3000 e os servidores nas portas
+4001 a 4004. Nao e necessario configurar dominio, HTTPS ou proxy.
 
-- `forca.arthurcmarques.com.br` apontando para o controller
-- `gs1.arthurcmarques.com.br` apontando para `game-server-1`
-- `gs2.arthurcmarques.com.br` apontando para `game-server-2`
+`CONTROLLER_URL=http://localhost:3000` e usado ao executar diretamente com Node.js.
+No Docker, o Compose substitui essa variavel por `CONTROLLER_INTERNAL_URL`, que
+usa `http://controller:3000`. Mantenha os nomes dos servicos nas URLs internas
+`GAME_SERVER_1_INTERNAL_URL` ate `GAME_SERVER_4_INTERNAL_URL`: dentro de um
+container, `localhost` aponta para o proprio container.
 
 ## Rodando localmente com Docker
 
@@ -83,15 +66,9 @@ docker compose up --build
 
 Acesso local na propria maquina:
 
-- Lobby: `https://forca.arthurcmarques.com.br`
-- Tela de jogo: `https://forca.arthurcmarques.com.br/game.html`
-- Monitor do controller: `https://forca.arthurcmarques.com.br/monitor.html`
-
-Acesso publico esperado:
-
-- Lobby: `https://forca.arthurcmarques.com.br`
-- Tela de jogo: `https://forca.arthurcmarques.com.br/game.html`
-- Monitor do controller: `https://forca.arthurcmarques.com.br/monitor.html`
+- Lobby: `http://localhost:3000`
+- Tela de jogo: `http://localhost:3000/game.html`
+- Monitor do controller: `http://localhost:3000/monitor.html`
 
 ## Rodando sem Docker
 
@@ -115,9 +92,9 @@ Exemplo no PowerShell:
 ```powershell
 $env:PORT=4002
 $env:SERVER_ID="game-server-2"
-$env:PUBLIC_SERVER_URL="https://gs2.arthurcmarques.com.br"
+$env:PUBLIC_SERVER_URL="http://localhost:4002"
 $env:INTERNAL_SERVER_URL="http://localhost:4002"
-$env:CONTROLLER_URL="https://forca.arthurcmarques.com.br"
+$env:CONTROLLER_URL="http://localhost:3000"
 node game-server/server.js
 ```
 
@@ -136,31 +113,31 @@ Para adicionar um novo servidor de jogo, repita o mesmo padrao dos servicos exis
 
 ### 1. Acrescente variaveis no `.env`
 
-Exemplo para um terceiro servidor:
+O Compose ja inclui quatro servidores. Exemplo para um quinto servidor:
 
 ```env
-GAME_SERVER_3_PORT=4003
-GAME_SERVER_3_ID=game-server-3
-GAME_SERVER_3_PUBLIC_URL=https://gs3.arthurcmarques.com.br
-GAME_SERVER_3_INTERNAL_URL=http://game-server-3:4003
+GAME_SERVER_5_PORT=4005
+GAME_SERVER_5_ID=game-server-5
+GAME_SERVER_5_PUBLIC_URL=http://localhost:4005
+GAME_SERVER_5_INTERNAL_URL=http://game-server-5:4005
 ```
 
 ### 2. Acrescente o servico no `docker-compose.yml`
 
 ```yml
-  game-server-3:
-    container_name: game-server-3
+  game-server-5:
+    container_name: game-server-5
     build:
       context: .
       dockerfile: game-server/Dockerfile
     environment:
-      PORT: ${GAME_SERVER_3_PORT}
-      SERVER_ID: ${GAME_SERVER_3_ID}
+      PORT: ${GAME_SERVER_5_PORT}
+      SERVER_ID: ${GAME_SERVER_5_ID}
       CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
-      PUBLIC_SERVER_URL: ${GAME_SERVER_3_PUBLIC_URL}
-      INTERNAL_SERVER_URL: ${GAME_SERVER_3_INTERNAL_URL}
+      PUBLIC_SERVER_URL: ${GAME_SERVER_5_PUBLIC_URL}
+      INTERNAL_SERVER_URL: ${GAME_SERVER_5_INTERNAL_URL}
     ports:
-      - "${GAME_SERVER_3_PORT}:${GAME_SERVER_3_PORT}"
+      - "${GAME_SERVER_5_PORT}:${GAME_SERVER_5_PORT}"
 ```
 
 Tambem inclua o novo servico em `depends_on` do controller:
@@ -170,14 +147,14 @@ Tambem inclua o novo servico em `depends_on` do controller:
       - game-server-1
       - game-server-2
       - game-server-3
+      - game-server-4
+      - game-server-5
 ```
 
-### 3. Publique o novo subdominio
+### 3. Configure a URL publica
 
-Crie e publique `gs3.arthurcmarques.com.br`:
-
-- no `nginx`, apontando para `127.0.0.1:4003`
-- no `cloudflared`, criando uma nova regra de ingress para esse hostname
+Para uso local, use `http://localhost:4005`. Para acesso externo, configure um
+endereco acessivel pelo navegador e publique a porta ou use um proxy.
 
 ### 4. Recrie os containers
 
@@ -191,7 +168,7 @@ Cada novo servidor precisa ter:
 
 - uma porta unica
 - um `SERVER_ID` unico
-- um subdominio proprio
+- uma URL publica acessivel pelo navegador
 - uma `INTERNAL_SERVER_URL` que aponte para o nome do servico Docker
 
 Sem isso, o controller nao consegue distribuir e migrar partidas corretamente.
