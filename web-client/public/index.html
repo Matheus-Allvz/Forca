@@ -1,72 +1,161 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forca Distribuida | Lobby</title>
+    <title>Forca Distribuída | Lobby Multijogador</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <main class="layout">
+      <!-- Global Top Navigation Bar -->
+      <header class="site-nav">
+        <a href="/" class="brand-logo">
+          <span class="brand-icon">🎮</span>
+          <span>Forca Distribuída</span>
+        </a>
+        <div class="nav-controls">
+          <div class="badge online pulse" id="system-status-badge">Controller Online</div>
+          <button type="button" class="icon-btn" id="sound-toggle" title="Alternar som" aria-label="Alternar som">🔊</button>
+          <button type="button" class="icon-btn" id="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema">🌙</button>
+          <a class="secondary-link" href="/monitor.html">
+            <span>📊 Monitor</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Hero Header -->
       <section class="panel hero">
-        <p class="eyebrow">Sistemas Distribuidos</p>
-        <h1>Forca Distribuida</h1>
-        <p class="subtitle">Entre no lobby, aguarde o pareamento e seja redirecionado para a tela dedicada da partida.</p>
+        <div class="eyebrow">⚡ Sistemas Distribuídos • Alta Disponibilidade</div>
+        <h1>Jogo da Forca Multijogador</h1>
+        <p class="subtitle">Entre no lobby, aguarde o pareamento inteligente e dispute partidas 1v1 em tempo real com failover automático entre servidores de jogo.</p>
       </section>
 
+      <!-- Main Lobby & Matchmaking Area -->
       <section class="panel lobby-shell">
         <div class="game-header">
           <div>
-            <h2>Lobby</h2>
-            <p id="lobby-subtitle">Conecte-se ao controller para procurar um adversario.</p>
+            <h2>Lobby de Pareamento</h2>
+            <p id="lobby-subtitle" class="subtitle">Conecte-se ao controller para encontrar um adversário.</p>
           </div>
-          <div class="monitor-links"><a class="secondary-link" href="/monitor.html">Abrir monitor</a><div class="badge" id="lobby-badge">Lobby</div></div>
+          <div class="monitor-links">
+            <span class="badge" id="lobby-badge">Lobby</span>
+          </div>
         </div>
 
-        <div class="turn-banner waiting" id="lobby-banner">Aguardando entrada no jogo.</div>
+        <div class="turn-banner waiting" id="lobby-banner">
+          <span>Aguardando entrada no jogo.</span>
+        </div>
 
         <div class="lobby-grid">
+          <!-- Join Form Card -->
           <form id="join-form" class="join-card">
-            <label for="player-name">Seu nome</label>
-            <input id="player-name" name="player-name" maxlength="24" required />
+            <div>
+              <h3>Entrar na Partida</h3>
+              <p class="subtitle" style="margin-bottom: 16px;">Digite seu nickname para iniciar a busca por oponentes.</p>
+              
+              <label for="player-name" style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Seu Apelido</label>
+              <div class="input-with-action">
+                <input id="player-name" name="player-name" maxlength="24" placeholder="Ex: CyberPlayer, Neo, Alana..." required autocomplete="off" />
+                <button type="button" class="dice-btn" id="random-name-btn" title="Gerar nome aleatório">🎲</button>
+              </div>
+            </div>
+
             <div class="stack-actions">
-              <button type="submit">Conectar</button>
-              <button type="button" class="secondary-button" id="leave-queue-button" disabled>Sair da fila</button>
+              <button type="submit" id="join-button">
+                <span>Buscar Partida</span> 🚀
+              </button>
+              <button type="button" class="secondary-button danger-button" id="leave-queue-button" disabled>
+                Sair da fila
+              </button>
             </div>
           </form>
 
-          <div class="queue-card">
-            <h3>Fila</h3>
-            <p id="public-queue-status">Consultando fila publica...</p>
-            <p id="queue-status">Conecte-se para entrar na fila de pareamento.</p>
-            <p id="queue-position"></p>
+          <!-- Queue Status Card -->
+          <div class="queue-card" id="queue-card">
+            <div>
+              <h3>Status da Fila</h3>
+              
+              <div class="radar-box">
+                <div class="radar-graphic" id="radar-graphic"></div>
+                <div class="queue-details">
+                  <strong id="queue-status">Conecte-se para entrar na fila de pareamento.</strong>
+                  <span id="queue-position"></span>
+                </div>
+              </div>
+
+              <div style="margin-top: 14px; padding: 12px; background: var(--surface-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <p id="public-queue-status" style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">
+                  Consultando fila pública...
+                </p>
+              </div>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 16px 0 0;">
+              💡 Cada partida reúne 2 jogadores. O controller aloca automaticamente o servidor de jogo menos carregado.
+            </p>
           </div>
         </div>
       </section>
 
+      <!-- Ranking Section -->
       <section class="panel ranking-panel">
         <div class="monitor-section-header">
           <div>
-            <h2>Ranking</h2>
-            <p id="ranking-subtitle">Jogadores com mais vitorias no servidor.</p>
+            <h2>🏆 Tabela de Líderes</h2>
+            <p id="ranking-subtitle" class="subtitle">Jogadores com melhor desempenho e vitórias acumuladas.</p>
           </div>
-          <p id="ranking-last-update">Atualizando...</p>
+          <p id="ranking-last-update" class="subtitle" style="font-size: 0.825rem;">Atualizando...</p>
         </div>
+
+        <!-- Top 3 Podium Cards -->
+        <div class="podium-grid" id="podium-container"></div>
+
+        <!-- Detailed Leaderboard Table -->
         <div class="table-wrap">
           <table class="monitor-table">
             <thead>
               <tr>
-                <th>#</th>
+                <th style="width: 60px;">#</th>
                 <th>Jogador</th>
-                <th>Vitorias</th>
-                <th>Derrotas</th>
-                <th>Partidas</th>
+                <th style="text-align: center;">Vitórias</th>
+                <th style="text-align: center;">Derrotas</th>
+                <th style="text-align: center;">Partidas</th>
                 <th>Aproveitamento</th>
               </tr>
             </thead>
-            <tbody id="ranking-body"></tbody>
+            <tbody id="ranking-body">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted);">Carregando classificação...</td>
+              </tr>
+            </tbody>
           </table>
         </div>
+      </section>
+
+      <!-- Rules & Architecture Highlights -->
+      <section class="features-grid">
+        <article class="feature-card">
+          <span class="feature-icon">⚡</span>
+          <h3>Duelo 1v1</h3>
+          <p>Disputa direta em turnos alternados de 20 segundos. Cada erro conta para quem arriscou o palpite.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">🛡️</span>
+          <h3>Failover Transparente</h3>
+          <p>Se o servidor cair, o controller migra a partida automaticamente para outro nó sem perder o estado.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">🔄</span>
+          <h3>Reconexão Rápida</h3>
+          <p>Queda de internet? O jogador tem até 30 segundos de tolerância para reconectar e continuar.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">💡</span>
+          <h3>Dicas & Estratégia</h3>
+          <p>Peça uma dica por partida e evite as 6 partes da forca para garantir a vitória no ranking.</p>
+        </article>
       </section>
     </main>
 

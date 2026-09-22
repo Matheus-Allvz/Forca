@@ -1,26 +1,43 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forca Distribuida | Teste da Forca</title>
+    <title>Forca Distribuída | Teste da Forca</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>">
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <main class="layout">
+      <!-- Global Top Navigation Bar -->
+      <header class="site-nav">
+        <a href="/" class="brand-logo">
+          <span class="brand-icon">🧪</span>
+          <span>Laboratório Visual • Forca</span>
+        </a>
+        <div class="nav-controls">
+          <button type="button" class="icon-btn" id="theme-toggle" title="Alternar tema" aria-label="Alternar tema">🌙</button>
+          <a class="secondary-link" href="/">
+            <span>🏠 Voltar ao Lobby</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Hero -->
       <section class="panel hero compact-hero">
-        <p class="eyebrow">Laboratorio Visual</p>
-        <h1>Teste da Forca</h1>
-        <p class="subtitle">Pagina isolada para validar os estados do desenho da forca. Nao aparece em nenhum link da interface.</p>
+        <div class="eyebrow">🧪 Laboratório Visual • Testes SVG</div>
+        <h1>Validação Visual da Forca</h1>
+        <p class="subtitle">Simule a sequência progressiva dos 6 estados de erro no desenho da forca em tempo real.</p>
       </section>
 
+      <!-- Controls Panel -->
       <section class="panel monitor-panel">
         <div class="monitor-section-header">
           <div>
-            <h2>Estados</h2>
-            <p class="subtitle">Escolha a quantidade de erros para ver exatamente o que aparece.</p>
+            <h2>Controle de Erros</h2>
+            <p class="subtitle">Arraste o slider ou clique nos botões para testar as partes do boneco.</p>
           </div>
-          <strong id="hangman-test-current">0 / 6 erros</strong>
+          <strong id="hangman-test-current" class="badge" style="font-size: 1rem; padding: 6px 16px;">0 / 6 erros</strong>
         </div>
 
         <div class="hangman-test-controls">
@@ -29,89 +46,101 @@
         </div>
       </section>
 
+      <!-- Stage & Parts Map -->
       <section class="panel">
         <div class="hangman-area hangman-test-area">
-          <div class="gallows">
+          <div class="gallows" id="gallows-stage">
             <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Desenho da forca">
               <defs>
                 <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#6f4c34" />
-                  <stop offset="46%" stop-color="#b1845f" />
-                  <stop offset="100%" stop-color="#7a573e" />
+                  <stop offset="0%" stop-color="#5a3d28" />
+                  <stop offset="46%" stop-color="#8c6142" />
+                  <stop offset="100%" stop-color="#523621" />
                 </linearGradient>
                 <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#3f6587" />
-                  <stop offset="100%" stop-color="#24435c" />
+                  <stop offset="0%" stop-color="#4f46e5" />
+                  <stop offset="100%" stop-color="#312e81" />
                 </linearGradient>
                 <linearGradient id="skinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#f7dfc8" />
-                  <stop offset="100%" stop-color="#dfb998" />
+                  <stop offset="0%" stop-color="#fcd34d" />
+                  <stop offset="100%" stop-color="#f59e0b" />
                 </linearGradient>
-                <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#1d2a3926" />
+                <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
                 </filter>
               </defs>
 
-              <ellipse cx="160" cy="330" rx="110" ry="16" fill="rgba(29, 42, 57, 0.12)" />
-              <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#7a593f" stroke="#654632" stroke-width="2" />
+              <!-- Floor shadow -->
+              <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.35)" />
+              
+              <!-- Gallows Base Platform -->
+              <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#523621" stroke="#3d2615" stroke-width="2" />
 
-              <rect x="52" y="40" width="18" height="244" rx="9" fill="url(#woodGradient)" filter="url(#softShadow)" />
-              <rect x="52" y="40" width="150" height="18" rx="9" fill="url(#woodGradient)" filter="url(#softShadow)" />
-              <rect x="66" y="56" width="16" height="112" rx="8" transform="rotate(38 66 56)" fill="#805b41" />
-              <rect x="186" y="58" width="7" height="28" rx="3.5" fill="#c9ad84" />
-              <circle cx="189.5" cy="89" r="4" fill="#c9ad84" />
-              <rect x="187" y="92" width="5" height="14" rx="2.5" fill="#b9996f" />
+              <!-- Vertical beam -->
+              <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient)" filter="url(#softShadow)" />
+              
+              <!-- Horizontal top beam -->
+              <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient)" filter="url(#softShadow)" />
+              
+              <!-- Diagonal support brace -->
+              <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#6e492e" />
+              
+              <!-- Rope & Noose ring -->
+              <rect x="187" y="56" width="6" height="32" rx="3" fill="#d97706" />
+              <circle cx="190" cy="92" r="5" fill="#b45309" />
+              <rect x="188" y="96" width="4" height="12" rx="2" fill="#92400e" />
 
+              <!-- Hangman Parts (6 parts) -->
+              <!-- Part 1: Head -->
               <g class="part head" data-part="cabeca">
-                <circle cx="189" cy="133" r="26" fill="url(#skinGradient)" stroke="#233547" stroke-width="5" />
-                <path d="M168 124 Q189 104 210 124" fill="#1f3041" opacity="0.12" />
-                <circle cx="180" cy="128" r="3.5" fill="#233547" />
-                <circle cx="198" cy="128" r="3.5" fill="#233547" />
-                <path d="M178 144 Q189 150 200 144" fill="none" stroke="#9f5f49" stroke-width="3" stroke-linecap="round" />
+                <circle cx="190" cy="132" r="25" fill="url(#skinGradient)" stroke="#1e1b4b" stroke-width="4" />
+                <circle cx="182" cy="128" r="3" fill="#1e1b4b" />
+                <circle cx="198" cy="128" r="3" fill="#1e1b4b" />
+                <path d="M181 144 Q190 138 199 144" fill="none" stroke="#b45309" stroke-width="3" stroke-linecap="round" />
               </g>
 
+              <!-- Part 2: Body / Torso -->
               <g class="part body" data-part="tronco">
-                <rect x="184" y="157" width="10" height="16" rx="5" fill="#dfb998" />
-                <path d="M174 170 Q189 162 204 170 L204 232 Q189 240 174 232 Z" fill="url(#bodyGradient)" stroke="#203448" stroke-width="4" stroke-linejoin="round" />
-                <path d="M181 180 L197 180" stroke="rgba(255,255,255,0.24)" stroke-width="3" stroke-linecap="round" />
+                <rect x="186" y="156" width="8" height="14" rx="4" fill="#f59e0b" />
+                <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient)" stroke="#1e1b4b" stroke-width="3.5" stroke-linejoin="round" />
               </g>
 
+              <!-- Part 3: Right Arm -->
               <g class="part arm-right" data-part="braco-direito">
-                <path d="M176 178 L160 192 L146 206" fill="none" stroke="#2f536f" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="160" cy="192" r="4" fill="#284a63" />
-                <circle cx="144" cy="208" r="5" fill="#dfb998" />
+                <path d="M176 176 L158 194 L142 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="140" cy="210" r="5" fill="#f59e0b" />
               </g>
 
+              <!-- Part 4: Left Arm -->
               <g class="part arm-left" data-part="braco-esquerdo">
-                <path d="M202 178 L218 192 L232 206" fill="none" stroke="#2f536f" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="218" cy="192" r="4" fill="#284a63" />
-                <circle cx="234" cy="208" r="5" fill="#dfb998" />
+                <path d="M204 176 L222 194 L238 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="240" cy="210" r="5" fill="#f59e0b" />
               </g>
 
+              <!-- Part 5: Right Leg -->
               <g class="part leg-right" data-part="perna-direita">
-                <path d="M180 232 L172 258 L166 286" fill="none" stroke="#333a41" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="172" cy="258" r="4.5" fill="#2a3036" />
-                <path d="M158 288 Q166 294 176 289" fill="none" stroke="#1f252b" stroke-width="6" stroke-linecap="round" />
+                <path d="M182 230 L174 258 L168 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M160 288 Q168 294 176 289" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
               </g>
 
+              <!-- Part 6: Left Leg -->
               <g class="part leg-left" data-part="perna-esquerda">
-                <path d="M198 232 L206 258 L212 286" fill="none" stroke="#333a41" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="206" cy="258" r="4.5" fill="#2a3036" />
-                <path d="M212 289 Q220 294 228 288" fill="none" stroke="#1f252b" stroke-width="6" stroke-linecap="round" />
+                <path d="M198 230 L206 258 L212 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M212 289 Q220 294 228 288" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
               </g>
             </svg>
-            <p class="gallows-caption" id="hangman-test-caption">Erros visiveis: 0/6</p>
+            <p class="gallows-caption" id="hangman-test-caption">Erros visíveis: 0/6</p>
           </div>
 
           <section class="panel hangman-test-panel">
-            <h3>Mapa de pecas</h3>
+            <h3>Mapeamento de Peças SVG</h3>
             <ol class="hangman-test-list">
-              <li>1 erro: cabeca</li>
-              <li>2 erros: tronco</li>
-              <li>3 erros: braco direito</li>
-              <li>4 erros: braco esquerdo</li>
-              <li>5 erros: perna direita</li>
-              <li>6 erros: perna esquerda</li>
+              <li><strong>1º erro:</strong> Cabeça com expressões faciais</li>
+              <li><strong>2º erro:</strong> Tronco com gradiente anatômico</li>
+              <li><strong>3º erro:</strong> Braço direito</li>
+              <li><strong>4º erro:</strong> Braço esquerdo</li>
+              <li><strong>5º erro:</strong> Perna direita</li>
+              <li><strong>6º erro:</strong> Perna esquerda (Enforcado / Fim de Jogo)</li>
             </ol>
           </section>
         </div>
