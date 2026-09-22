@@ -11,9 +11,15 @@ const containerJogadores = document.querySelector("#players");
 const formularioPalpite = document.querySelector("#guess-form");
 const campoPalpite = document.querySelector("#guess-input");
 const listaEventos = document.querySelector("#event-log");
+const botaoDesistir = document.querySelector("#surrender-button");
+const acoesPosJogo = document.querySelector("#post-game-actions");
+const botaoJogarNovamente = document.querySelector("#play-again-button");
+const botaoVoltarLobby = document.querySelector("#return-lobby-button");
+const legendaForca = document.querySelector("#gallows-caption");
 
 const chaveSessao = "forca-distribuida-session";
 const chavePartida = "forca-distribuida-match";
+const chaveNomePreferido = "forca-distribuida-preferred-name";
 const sessao = carregarJson(chaveSessao);
 const socketController = io();
 let dadosPartida = carregarJson(chavePartida);
@@ -21,6 +27,8 @@ let estadoAtual = null;
 let socketPartida = null;
 let temporizadorRecuperacao = null;
 let desconexaoEsperada = false;
+let temporizadorTurno = null;
+let prazoTurnoLocal = null;
 
 function carregarJson(chave) {
   try {
@@ -35,6 +43,9 @@ function salvarJson(chave, valor) {
 }
 
 function adicionarLog(mensagem) {
+  if (!listaEventos) {
+    return;
+  }
   const item = document.createElement("li");
   item.textContent = `[${new Date().toLocaleTimeString()}] ${mensagem}`;
   listaEventos.prepend(item);
@@ -51,6 +62,48 @@ function atualizarFaixaTurno(tipo, mensagem) {
   faixaTurno.textContent = mensagem;
 }
 
+function pararTemporizadorTurno() {
+  if (temporizadorTurno) {
+    clearInterval(temporizadorTurno);
+    temporizadorTurno = null;
+  }
+  prazoTurnoLocal = null;
+}
+
+function formatarSegundosRestantes(restanteMs) {
+  return Math.max(1, Math.ceil(restanteMs / 1000));
+}
+
+function renderizarTempoTurno() {
+  if (!estadoAtual || estadoAtual.status !== "playing" || !prazoTurnoLocal) {
+    pararTemporizadorTurno();
+    return;
+  }
+
+  const visualizador = estadoAtual.players.find((jogador) => jogador.playerId === estadoAtual.viewerPlayerId);
+  const podeJogar = Boolean(visualizador && visualizador.isTurn && visualizador.connected);
+  const restanteMs = Math.max(prazoTurnoLocal - Date.now(), 0);
+  const segundos = formatarSegundosRestantes(restanteMs);
+  subtituloPartida.textContent = `Vez de ${estadoAtual.currentTurnPlayerName || "aguardar"} • ${segundos}s restantes`;
+
+  if (podeJogar) {
+    atualizarFaixaTurno("active", `Sua vez de jogar. Escolha uma letra em ${segundos}s.`);
+  } else {
+    atualizarFaixaTurno("idle", `Aguarde. Agora e a vez de ${estadoAtual.currentTurnPlayerName || "seu adversario"} por ${segundos}s.`);
+  }
+}
+
+function iniciarTemporizadorTurno(estado) {
+  pararTemporizadorTurno();
+  if (estado.status !== "playing" || !Number.isFinite(estado.remainingTurnMs)) {
+    return;
+  }
+
+  prazoTurnoLocal = Date.now() + estado.remainingTurnMs;
+  renderizarTempoTurno();
+  temporizadorTurno = setInterval(renderizarTempoTurno, 250);
+}
+
 function atualizarDadosPartida(proximosDados) {
   dadosPartida = {
     ...dadosPartida,
@@ -59,6 +112,24 @@ function atualizarDadosPartida(proximosDados) {
     reconnectToken: sessao.reconnectToken
   };
   salvarJson(chavePartida, dadosPartida);
+}
+
+function encerrarFluxoDaPartida({ jogarNovamente = false } = {}) {
+  if (sessao?.playerName) {
+    localStorage.setItem(chaveNomePreferido, sessao.playerName);
+  }
+
+  localStorage.removeItem(chaveSessao);
+  localStorage.removeItem(chavePartida);
+
+  if (socketPartida) {
+    desconexaoEsperada = true;
+    socketPartida.removeAllListeners();
+    socketPartida.disconnect();
+  }
+
+  const destino = jogarNovamente ? "/?playAgain=1" : "/";
+  window.location.href = destino;
 }
 
 function renderizarJogadores(estado) {
@@ -103,11 +174,21 @@ function renderizarEstadoPartida(estado) {
   renderizarJogadores(estado);
 
   const visualizador = estado.players.find((jogador) => jogador.playerId === estado.viewerPlayerId);
+  if (legendaForca) {
+    legendaForca.textContent = `Erros visiveis: ${visualizador ? visualizador.errors : 0}/${estado.maxErrors}`;
+  }
   const podeJogar = estado.status === "playing" && visualizador && visualizador.isTurn && visualizador.connected;
   campoPalpite.disabled = !podeJogar;
   formularioPalpite.querySelector("button").disabled = !podeJogar;
+  if (botaoDesistir) {
+    botaoDesistir.disabled = estado.status === "finished";
+  }
+  if (acoesPosJogo) {
+    acoesPosJogo.classList.toggle("hidden", estado.status !== "finished");
+  }
 
   if (estado.status === "finished") {
+    pararTemporizadorTurno();
     atualizarFaixaTurno("finished", estado.winnerPlayerId === estado.viewerPlayerId ? "Partida encerrada. Voce venceu." : "Partida encerrada. Voce perdeu.");
   } else if (podeJogar) {
     atualizarFaixaTurno("active", "Sua vez de jogar. Escolha uma letra.");
@@ -115,6 +196,8 @@ function renderizarEstadoPartida(estado) {
   } else {
     atualizarFaixaTurno("idle", `Aguarde. Agora e a vez de ${estado.currentTurnPlayerName || "seu adversario"}.`);
   }
+
+  iniciarTemporizadorTurno(estado);
 }
 
 botaoDica.addEventListener("click", () => {
@@ -126,6 +209,31 @@ botaoDica.addEventListener("click", () => {
     gameId: estadoAtual.gameId,
     playerId: sessao.playerId
   });
+});
+
+botaoDesistir?.addEventListener("click", () => {
+  if (!socketPartida || !estadoAtual || estadoAtual.status === "finished") {
+    return;
+  }
+
+  const confirmou = window.confirm("Deseja desistir da partida? Seu adversario sera declarado vencedor.");
+  if (!confirmou) {
+    return;
+  }
+
+  socketPartida.emit("surrender-game", {
+    gameId: estadoAtual.gameId,
+    playerId: sessao.playerId
+  });
+  botaoDesistir.disabled = true;
+});
+
+botaoJogarNovamente?.addEventListener("click", () => {
+  encerrarFluxoDaPartida({ jogarNovamente: true });
+});
+
+botaoVoltarLobby?.addEventListener("click", () => {
+  encerrarFluxoDaPartida();
 });
 
 function pararRecuperacao() {
@@ -172,6 +280,7 @@ function iniciarRecuperacao() {
     return;
   }
 
+  pararTemporizadorTurno();
   campoPalpite.disabled = true;
   formularioPalpite.querySelector("button").disabled = true;
   atualizarFaixaTurno("waiting", "Servidor indisponivel. Aguardando migracao da partida...");
@@ -324,4 +433,5 @@ socketController.on("match-found", (payload) => {
 renderizarForca([]);
 campoPalpite.disabled = true;
 formularioPalpite.querySelector("button").disabled = true;
+pararTemporizadorTurno();
 restaurarPartida();

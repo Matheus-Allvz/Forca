@@ -7,11 +7,16 @@ services:
     environment:
       PORT: ${CONTROLLER_PORT}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      RANKING_FILE: /app/data/ranking.json
     ports:
       - "${CONTROLLER_PORT}:${CONTROLLER_PORT}"
+    volumes:
+      - forca-ranking-data:/app/data
     depends_on:
       - game-server-1
       - game-server-2
+      - game-server-3
+      - game-server-4
 
   game-server-1:
     container_name: game-server-1
@@ -40,3 +45,34 @@ services:
       INTERNAL_SERVER_URL: ${GAME_SERVER_2_INTERNAL_URL}
     ports:
       - "${GAME_SERVER_2_PORT}:${GAME_SERVER_2_PORT}"
+
+  game-server-3:
+    container_name: game-server-3
+    build:
+      context: .
+      dockerfile: game-server/Dockerfile
+    environment:
+      PORT: ${GAME_SERVER_3_PORT}
+      SERVER_ID: ${GAME_SERVER_3_ID}
+      CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
+      PUBLIC_SERVER_URL: ${GAME_SERVER_3_PUBLIC_URL}
+      INTERNAL_SERVER_URL: ${GAME_SERVER_3_INTERNAL_URL}
+    ports:
+      - "${GAME_SERVER_3_PORT}:${GAME_SERVER_3_PORT}"
+
+  game-server-4:
+    container_name: game-server-4
+    build:
+      context: .
+      dockerfile: game-server/Dockerfile
+    environment:
+      PORT: ${GAME_SERVER_4_PORT}
+      SERVER_ID: ${GAME_SERVER_4_ID}
+      CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
+      PUBLIC_SERVER_URL: ${GAME_SERVER_4_PUBLIC_URL}
+      INTERNAL_SERVER_URL: ${GAME_SERVER_4_INTERNAL_URL}
+    ports:
+      - "${GAME_SERVER_4_PORT}:${GAME_SERVER_4_PORT}"
+
+volumes:
+  forca-ranking-data:

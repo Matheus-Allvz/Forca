@@ -3,6 +3,7 @@ const corpoServidores = document.querySelector("#servers-body");
 const corpoFila = document.querySelector("#queue-body");
 const corpoSessoes = document.querySelector("#sessions-body");
 const corpoPartidas = document.querySelector("#games-body");
+const listaEventos = document.querySelector("#events-list");
 const ultimaAtualizacao = document.querySelector("#last-refresh");
 
 function renderizarResumo(saude, metricas) {
@@ -91,6 +92,21 @@ function renderizarSessoes(sessoes) {
   `).join("");
 }
 
+function renderizarEventos(eventos) {
+  if (!listaEventos) {
+    return;
+  }
+
+  if (!eventos.length) {
+    listaEventos.innerHTML = "<li>Nenhum evento registrado.</li>";
+    return;
+  }
+
+  listaEventos.innerHTML = eventos.map((evento) => `
+    <li>[${new Date(evento.createdAt).toLocaleTimeString()}] ${evento.message}</li>
+  `).join("");
+}
+
 async function atualizarPainel() {
   try {
     const [respostaSaude, respostaMetricas] = await Promise.all([
@@ -105,6 +121,7 @@ async function atualizarPainel() {
     renderizarFila(metricas.waitingQueue || []);
     renderizarPartidas(metricas.games || []);
     renderizarSessoes(metricas.sessions || []);
+    renderizarEventos(metricas.events || []);
     ultimaAtualizacao.textContent = `Ultima atualizacao: ${new Date().toLocaleTimeString()}`;
   } catch (error) {
     ultimaAtualizacao.textContent = "Falha ao atualizar o painel.";

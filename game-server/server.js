@@ -55,6 +55,7 @@ function serializarPartida(partida) {
     attemptedLetters: [...partida.attemptedLetters],
     wrongLetters: [...partida.wrongLetters],
     correctLetters: [...partida.correctLetters],
+    turnDeadline: partida.turnDeadline || null,
     winnerPlayerId: partida.winnerPlayerId,
     loserPlayerId: partida.loserPlayerId,
     createdAt: partida.createdAt
@@ -100,6 +101,8 @@ function montarEstadoPublico(partida, idVisualizador) {
     })),
     currentTurnPlayerId: partida.players[partida.turnIndex]?.playerId || null,
     currentTurnPlayerName: partida.players[partida.turnIndex]?.playerName || null,
+    remainingTurnMs: partida.turnDeadline ? Math.max(partida.turnDeadline - Date.now(), 0) : null,
+    turnTimeLimitMs: REGRAS_DO_JOGO.turnTimeLimitMs,
     winnerPlayerId: partida.winnerPlayerId,
     loserPlayerId: partida.loserPlayerId,
     viewerPlayerId: visualizador ? visualizador.playerId : null,
@@ -137,10 +140,54 @@ async function notificarControllerEncerramento(partida, motivo) {
   }
 }
 
+function limparTemporizadorTurno(partida) {
+  if (partida.turnTimer) {
+    clearTimeout(partida.turnTimer);
+    partida.turnTimer = null;
+  }
+  partida.turnDeadline = null;
+}
+
+function avancarTurno(partida) {
+  partida.turnIndex = partida.turnIndex === 0 ? 1 : 0;
+}
+
+function registrarTempoLimiteTurno(partida) {
+  limparTemporizadorTurno(partida);
+  if (partida.status !== "playing") {
+    return;
+  }
+
+  partida.turnDeadline = Date.now() + REGRAS_DO_JOGO.turnTimeLimitMs;
+  partida.turnTimer = setTimeout(async () => {
+    if (partida.status !== "playing") {
+      return;
+    }
+
+    const jogadorAtual = partida.players[partida.turnIndex];
+    if (!jogadorAtual) {
+      return;
+    }
+
+    avancarTurno(partida);
+    const proximoJogador = partida.players[partida.turnIndex];
+    limparTemporizadorTurno(partida);
+    registrarTempoLimiteTurno(partida);
+
+    io.to(partida.gameId).emit("guess-feedback", {
+      type: "info",
+      message: `Tempo de ${jogadorAtual.playerName} esgotado. Vez de ${proximoJogador?.playerName || "aguardar"}.`
+    });
+    emitirEstadoPartida(partida);
+    await sincronizarEstadoPartida(partida);
+  }, REGRAS_DO_JOGO.turnTimeLimitMs);
+}
+
 function encerrarPartida(partida, idJogadorVencedor, idJogadorPerdedor, motivo) {
   partida.status = "finished";
   partida.winnerPlayerId = idJogadorVencedor;
   partida.loserPlayerId = idJogadorPerdedor;
+  limparTemporizadorTurno(partida);
   for (const jogador of partida.players) {
     if (jogador.disconnectTimer) {
       clearTimeout(jogador.disconnectTimer);
@@ -225,6 +272,8 @@ app.post("/internal/create-game", async (req, res) => {
     attemptedLetters: new Set(),
     wrongLetters: [],
     correctLetters: new Set(),
+    turnTimer: null,
+    turnDeadline: null,
     winnerPlayerId: null,
     loserPlayerId: null,
     createdAt: Date.now()
@@ -259,6 +308,8 @@ app.post("/internal/restore-game", async (req, res) => {
     attemptedLetters: new Set(snapshot.attemptedLetters || []),
     wrongLetters: [...(snapshot.wrongLetters || [])],
     correctLetters: new Set(snapshot.correctLetters || []),
+    turnTimer: null,
+    turnDeadline: null,
     winnerPlayerId: snapshot.winnerPlayerId || null,
     loserPlayerId: snapshot.loserPlayerId || null,
     createdAt: snapshot.createdAt || Date.now()
@@ -296,7 +347,11 @@ io.on("connection", (socket) => {
     }
 
     if (partida.players.every((entrada) => entrada.connected) && partida.status !== "finished") {
+      const precisaIniciarTemporizador = partida.status !== "playing" || !partida.turnTimer;
       partida.status = "playing";
+      if (precisaIniciarTemporizador) {
+        registrarTempoLimiteTurno(partida);
+      }
     }
 
     emitirEstadoPartida(partida);
@@ -331,6 +386,7 @@ io.on("connection", (socket) => {
       return;
     }
 
+    limparTemporizadorTurno(partida);
     partida.attemptedLetters.add(letraNormalizada);
     if (partida.word.includes(letraNormalizada)) {
       partida.correctLetters.add(letraNormalizada);
@@ -362,9 +418,11 @@ io.on("connection", (socket) => {
         encerrarPartida(partida, adversario ? adversario.playerId : null, jogadorAtual.playerId, "max-errors");
         return;
       }
+
+      avancarTurno(partida);
     }
 
-    partida.turnIndex = partida.turnIndex === 0 ? 1 : 0;
+    registrarTempoLimiteTurno(partida);
     emitirEstadoPartida(partida);
     await sincronizarEstadoPartida(partida);
   });
@@ -395,6 +453,25 @@ io.on("connection", (socket) => {
     await sincronizarEstadoPartida(partida);
   });
 
+  socket.on("surrender-game", async ({ gameId, playerId }) => {
+    const partida = partidas.get(gameId);
+    if (!partida || partida.status === "finished") {
+      return;
+    }
+
+    const jogador = partida.players.find((entrada) => entrada.playerId === playerId);
+    const adversario = partida.players.find((entrada) => entrada.playerId !== playerId);
+    if (!jogador || !adversario) {
+      return;
+    }
+
+    io.to(partida.gameId).emit("guess-feedback", {
+      type: "info",
+      message: `${jogador.playerName} desistiu da partida.`
+    });
+    encerrarPartida(partida, adversario.playerId, jogador.playerId, "opponent-surrender");
+  });
+
   socket.on("disconnect", async () => {
     const { gameId, playerId } = socket.data;
     if (!gameId || !playerId) {
@@ -413,6 +490,9 @@ io.on("connection", (socket) => {
 
     jogador.connected = false;
     jogador.socketId = null;
+    if (partida.players[partida.turnIndex]?.playerId === jogador.playerId) {
+      limparTemporizadorTurno(partida);
+    }
     registrarTempoLimiteDesconexao(partida, jogador);
 
     io.to(partida.gameId).emit("player-disconnected", {
@@ -433,6 +513,7 @@ async function registrarNoController() {
     body: JSON.stringify({
       serverId: idServidor,
       publicPort: porta,
+      publicUrl: urlPublicaServidor,
       internalUrl: urlInterna
     })
   });
