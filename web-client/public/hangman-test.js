@@ -11,6 +11,33 @@ const faixa = document.querySelector("#hangman-test-range");
 const rotuloAtual = document.querySelector("#hangman-test-current");
 const legenda = document.querySelector("#hangman-test-caption");
 const botoes = document.querySelector("#hangman-test-buttons");
+const botaoTema = document.querySelector("#theme-toggle");
+
+const chaveTema = "forca-distribuida-theme";
+
+// Gerenciamento de Tema
+function inicializarTema() {
+  const temaSalvo = localStorage.getItem(chaveTema) || "dark";
+  document.documentElement.setAttribute("data-theme", temaSalvo);
+  atualizarBotaoTema(temaSalvo);
+}
+
+function atualizarBotaoTema(tema) {
+  if (botaoTema) {
+    botaoTema.textContent = tema === "dark" ? "🌙" : "☀️";
+    botaoTema.title = tema === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro";
+  }
+}
+
+function alternarTema() {
+  const temaAtual = document.documentElement.getAttribute("data-theme") || "dark";
+  const proximoTema = temaAtual === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", proximoTema);
+  localStorage.setItem(chaveTema, proximoTema);
+  atualizarBotaoTema(proximoTema);
+}
+
+botaoTema?.addEventListener("click", alternarTema);
 
 function renderizarPartes(totalErros) {
   const visiveis = new Set(partesDaForca.slice(0, totalErros));
@@ -22,7 +49,7 @@ function renderizarPartes(totalErros) {
     rotuloAtual.textContent = `${totalErros} / 6 erros`;
   }
   if (legenda) {
-    legenda.textContent = `Erros visiveis: ${totalErros}/6`;
+    legenda.textContent = `Erros visíveis: ${totalErros}/6`;
   }
 
   document.querySelectorAll("[data-errors]").forEach((botao) => {
@@ -41,7 +68,7 @@ function criarBotoes() {
     botao.type = "button";
     botao.className = "secondary-button";
     botao.dataset.errors = String(erros);
-    botao.textContent = String(erros);
+    botao.textContent = `${erros} erro${erros === 1 ? "" : "s"}`;
     botao.addEventListener("click", () => {
       faixa.value = String(erros);
       renderizarPartes(erros);
@@ -54,5 +81,6 @@ faixa?.addEventListener("input", () => {
   renderizarPartes(Number(faixa.value));
 });
 
+inicializarTema();
 criarBotoes();
 renderizarPartes(Number(faixa?.value || 0));

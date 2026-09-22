@@ -1,84 +1,144 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forca Distribuida | Monitor</title>
+    <title>Forca Distribuída | Console de Monitoramento</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <main class="layout monitor-layout">
+      <!-- Global Top Navigation Bar -->
+      <header class="site-nav">
+        <a href="/" class="brand-logo">
+          <span class="brand-icon">📊</span>
+          <span>Forca Distribuída • Monitor</span>
+        </a>
+        <div class="nav-controls">
+          <div class="badge online pulse" id="monitor-health-badge">Nós Conectados</div>
+          <button type="button" class="icon-btn" id="theme-toggle" title="Alternar tema claro/escuro" aria-label="Alternar tema">🌙</button>
+          <a class="secondary-link" href="/">
+            <span>🏠 Voltar ao Lobby</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Dashboard Hero Header -->
       <section class="panel hero compact-hero">
         <div class="monitor-header-row">
           <div>
-            <p class="eyebrow">Controller</p>
-            <h1>Painel de Monitoramento</h1>
-            <p class="subtitle">Visao em tempo real da fila, dos servidores, das sessoes e das partidas.</p>
+            <div class="eyebrow">⚙️ Observabilidade & Topologia de Servidores</div>
+            <h1 style="margin: 4px 0 6px;">Console de Monitoramento</h1>
+            <p class="subtitle">Visão em tempo real do estado dos nós do cluster, filas de pareamento, failovers e sessões ativas.</p>
           </div>
-          <a class="secondary-link" href="/">Voltar ao lobby</a>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="secondary-button" id="manual-refresh-btn" style="padding: 9px 14px; font-size: 0.85rem;">
+              🔄 Atualizar Agora
+            </button>
+            <span class="badge" id="last-refresh" style="font-size: 0.8rem;">Atualizando...</span>
+          </div>
         </div>
       </section>
 
-      <section class="monitor-summary" id="summary-cards"></section>
+      <!-- Metric Summary Cards -->
+      <section class="monitor-summary" id="summary-cards">
+        <!-- Rendered dynamically via JS -->
+      </section>
 
+      <!-- Visual Server Nodes Grid -->
       <section class="panel monitor-panel">
         <div class="monitor-section-header">
-          <h2>Servidores</h2>
-          <p id="last-refresh">Atualizando...</p>
+          <div>
+            <h2>🖥️ Nós de Servidores de Jogo</h2>
+            <p class="subtitle" style="font-size: 0.85rem;">Status dos contêineres e instâncias registradas no controller.</p>
+          </div>
         </div>
-        <div class="table-wrap">
+        
+        <!-- Grid of Server Cards -->
+        <div class="server-nodes-grid" id="server-nodes-cards">
+          <!-- Rendered dynamically via JS -->
+        </div>
+
+        <!-- Detailed Servers Table -->
+        <div class="table-wrap" style="margin-top: 8px;">
           <table class="monitor-table">
             <thead>
               <tr>
                 <th>Servidor</th>
-                <th>Status</th>
-                <th>Jogos ativos</th>
-                <th>Ultimo heartbeat</th>
-                <th>URL publica</th>
+                <th>Status Heartbeat</th>
+                <th style="text-align: center;">Partidas Ativas</th>
+                <th>Último Heartbeat</th>
+                <th>URL Pública</th>
               </tr>
             </thead>
-            <tbody id="servers-body"></tbody>
+            <tbody id="servers-body">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Consultando servidores...</td></tr>
+            </tbody>
           </table>
         </div>
       </section>
 
+      <!-- Waiting Queue & Active Games Side by Side -->
       <section class="monitor-grid">
+        <!-- Waiting Queue -->
         <section class="panel monitor-panel">
-          <h2>Fila de espera</h2>
+          <div class="monitor-section-header">
+            <div>
+              <h2>👥 Fila de Pareamento</h2>
+              <p class="subtitle" style="font-size: 0.85rem;">Jogadores aguardando oponente.</p>
+            </div>
+          </div>
           <div class="table-wrap">
             <table class="monitor-table">
               <thead>
                 <tr>
-                  <th>Posicao</th>
+                  <th style="width: 70px;">Posição</th>
                   <th>Jogador</th>
                   <th>Player ID</th>
                 </tr>
               </thead>
-              <tbody id="queue-body"></tbody>
+              <tbody id="queue-body">
+                <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Fila vazia.</td></tr>
+              </tbody>
             </table>
           </div>
         </section>
 
+        <!-- Active Games -->
         <section class="panel monitor-panel">
-          <h2>Partidas</h2>
+          <div class="monitor-section-header">
+            <div>
+              <h2>⚔️ Partidas em Execução</h2>
+              <p class="subtitle" style="font-size: 0.85rem;">Instâncias ativas distribuídas nos nós.</p>
+            </div>
+          </div>
           <div class="table-wrap">
             <table class="monitor-table">
               <thead>
                 <tr>
                   <th>Game ID</th>
-                  <th>Servidor</th>
+                  <th>Nó Servidor</th>
                   <th>Status</th>
                   <th>Jogadores</th>
                 </tr>
               </thead>
-              <tbody id="games-body"></tbody>
+              <tbody id="games-body">
+                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma partida ativa.</td></tr>
+              </tbody>
             </table>
           </div>
         </section>
       </section>
 
+      <!-- Active Sessions Table -->
       <section class="panel monitor-panel">
-        <h2>Sessoes</h2>
+        <div class="monitor-section-header">
+          <div>
+            <h2>📋 Sessões de Jogadores</h2>
+            <p class="subtitle" style="font-size: 0.85rem;">Tokens e mapeamento de sessões mantidas pelo controller.</p>
+          </div>
+        </div>
         <div class="table-wrap">
           <table class="monitor-table">
             <thead>
@@ -86,18 +146,28 @@
                 <th>Jogador</th>
                 <th>Status</th>
                 <th>Game ID</th>
-                <th>Servidor</th>
-                <th>Criada em</th>
+                <th>Servidor Alocado</th>
+                <th>Criado em</th>
               </tr>
             </thead>
-            <tbody id="sessions-body"></tbody>
+            <tbody id="sessions-body">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma sessão registrada.</td></tr>
+            </tbody>
           </table>
         </div>
       </section>
 
+      <!-- Live Event Stream Feed -->
       <section class="panel monitor-panel">
-        <h2>Eventos</h2>
-        <ul id="events-list" class="event-log"></ul>
+        <div class="monitor-section-header">
+          <div>
+            <h2>📜 Fluxo de Eventos em Tempo Real</h2>
+            <p class="subtitle" style="font-size: 0.85rem;">Registro de eventos de conexões, pareamentos, heartbeat e migrações.</p>
+          </div>
+        </div>
+        <ul id="events-list" class="event-log">
+          <li>Aguardando eventos...</li>
+        </ul>
       </section>
     </main>
 
