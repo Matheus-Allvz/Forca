@@ -1,36 +1,32 @@
-﻿# Forca Distribuida
+# Forca Distribuida
 
-Projeto em Node.js para demonstrar uma arquitetura distribuida do jogo da forca com:
+Projeto em Node.js demonstrando uma arquitetura distribuida, resiliente e em tempo real do jogo da forca:
 
-- `controller` centralizando fila, pareamento e descoberta dos servidores.
-- `game-server` executando partidas independentes via socket.
-- `web-client` servido pelo controller.
-- `docker-compose` com um controller e quatro servidores de jogo.
-- configuracao centralizada via `.env`.
-- failover de partida entre servidores com snapshot mantido no controller.
+- **Produção:** [https://forca.matheus-alves.dev](https://forca.matheus-alves.dev)
+- **Painel de Observabilidade / Monitor:** [https://forca.matheus-alves.dev/monitor.html](https://forca.matheus-alves.dev/monitor.html)
+- **Métricas:** [https://forca.matheus-alves.dev/metrics](https://forca.matheus-alves.dev/metrics)
+- **Healthcheck:** [https://forca.matheus-alves.dev/health](https://forca.matheus-alves.dev/health)
 
-## Arquitetura
+## Características da Atividade e Requisitos Atendidos
 
-1. O cliente web conecta ao `controller` por socket.
-2. O controller coloca o jogador na fila e informa a posicao de espera.
-3. Quando existem dois jogadores disponiveis, o controller escolhe o servidor menos carregado.
-4. O controller cria uma nova partida nesse servidor.
-5. O `game-server` envia snapshots do estado da partida de volta ao controller.
-6. Se um servidor parar de enviar heartbeat, o controller restaura a partida em outro servidor saudavel.
-7. O cliente detecta a queda, consulta o controller e reconecta automaticamente ao novo servidor.
-
-## Requisitos atendidos
-
-- Cada partida possui exatamente 2 jogadores.
-- Um terceiro jogador gera outra espera e depois outra partida, dando ideia de escalabilidade.
-- Quatro servidores de jogo sao iniciados em containers separados.
-- Comunicacao cliente-servidor via socket.
-- Reconexao em ate 30 segundos; apos isso, o adversario vence.
-- Fila amigavel com feedback de posicao.
-- Exibicao de letras corretas/erradas.
-- Exibicao grafica da forca e do boneco no cliente.
-- Monitoramento por `/health`, `/metrics` e `/monitor.html`.
-- Failover de partida para outro servidor quando o servidor original cai.
+1. **Comunicação por Socket:**
+   - Comunicação full-duplex e orientada a eventos via Socket.IO entre Web-Client, Controller e Game-Servers.
+2. **Servidor Resiliente (Sistemas Distribuídos & Failover):**
+   - Arquitetura com Controller centralizador e múltiplos Game Servers independentes em containers separados.
+   - Heartbeat periódico a cada 15s. Se um nó cair ou for interrompido, o Controller detecta a partição de rede/falha e migra automaticamente a partida ativa para outro nó saudável, restaurando integralmente os dados (palavra, letras tentadas, vidas e turno).
+3. **Múltiplas Requisições & Sala de Espera (Lobby):**
+   - Gerenciamento de fila de espera com contagem pública e posição individual em tempo real.
+4. **Máximo de 2 Jogadores por Partida:**
+   - Pareamento automático estrito de 2 em 2 jogadores. Um terceiro jogador aguarda na sala de espera pela chegada do quarto.
+5. **Semáforo de Controle de Comunicações:**
+   - O servidor atua como um semáforo estrito (um jogador por vez).
+   - Bloqueio atômico contra condições de corrida e controle visual com semáforo de 3 estados (verde, amarelo, vermelho) para guiar o fluxo de turnos.
+6. **Duelo de Forcas e Status Compartilhado (Dois Bonecos Simultâneos):**
+   - Ambos os jogadores visualizam simultaneamente duas forcas completas e independentes: a sua própria e a do adversário.
+   - Quando um jogador erra uma letra, o respectivo boneco é desenhado na forca dele em tempo real e visualizado por ambos os competidores.
+7. **Infraestrutura VPS & Proxy Reverso Caddy:**
+   - Roteamento transparente via Caddyfile no domínio `forca.matheus-alves.dev`.
+   - Porta alternativa SSH da VPS descoberta e utilizada: **porta 443** (multiplexada via sslh).
 
 ## Configuracao com .env
 
