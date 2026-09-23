@@ -97,7 +97,8 @@ function montarEstadoPublico(partida, idVisualizador) {
       connected: jogador.connected,
       errors: jogador.errors,
       isTurn: partida.turnIndex === indice,
-      remainingReconnectMs: jogador.disconnectDeadline ? Math.max(jogador.disconnectDeadline - Date.now(), 0) : 0
+      remainingReconnectMs: jogador.disconnectDeadline ? Math.max(jogador.disconnectDeadline - Date.now(), 0) : 0,
+      hangmanPartsDrawn: PARTES_DA_FORCA.slice(0, jogador.errors)
     })),
     currentTurnPlayerId: partida.players[partida.turnIndex]?.playerId || null,
     currentTurnPlayerName: partida.players[partida.turnIndex]?.playerName || null,
@@ -107,7 +108,12 @@ function montarEstadoPublico(partida, idVisualizador) {
     loserPlayerId: partida.loserPlayerId,
     viewerPlayerId: visualizador ? visualizador.playerId : null,
     maxErrors: REGRAS_DO_JOGO.maxErrors,
-    hangmanPartsDrawn: PARTES_DA_FORCA.slice(0, visualizador ? visualizador.errors : 0)
+    hangmanPartsDrawn: PARTES_DA_FORCA.slice(0, visualizador ? visualizador.errors : 0),
+    semaphore: {
+      activePlayerId: partida.players[partida.turnIndex]?.playerId || null,
+      activePlayerName: partida.players[partida.turnIndex]?.playerName || null,
+      state: partida.status === "playing" ? "green" : "red"
+    }
   };
 }
 
@@ -369,6 +375,11 @@ io.on("connection", (socket) => {
       return;
     }
 
+    if (partida.processingGuess) {
+      io.to(socket.id).emit("guess-feedback", { type: "info", message: "Semáforo ocupado: processando jogada anterior..." });
+      return;
+    }
+
     const letraNormalizada = String(letter || "").trim().toLowerCase();
     if (!/^[a-z]$/.test(letraNormalizada)) {
       io.to(socket.id).emit("guess-feedback", { type: "error", message: "Envie apenas uma letra de A a Z." });
@@ -377,54 +388,68 @@ io.on("connection", (socket) => {
 
     const jogadorAtual = partida.players[partida.turnIndex];
     if (!jogadorAtual || jogadorAtual.playerId !== playerId) {
-      io.to(socket.id).emit("guess-feedback", { type: "error", message: "Nao e a sua vez." });
+      io.to(socket.id).emit("guess-feedback", { type: "error", message: "Semáforo fechado para você! Aguarde o turno do adversário." });
       return;
     }
 
     if (partida.attemptedLetters.has(letraNormalizada)) {
-      io.to(socket.id).emit("guess-feedback", { type: "error", message: "Essa letra ja foi tentada." });
+      io.to(socket.id).emit("guess-feedback", { type: "error", message: "Essa letra já foi tentada." });
       return;
     }
 
-    limparTemporizadorTurno(partida);
-    partida.attemptedLetters.add(letraNormalizada);
-    if (partida.word.includes(letraNormalizada)) {
-      partida.correctLetters.add(letraNormalizada);
-      io.to(partida.gameId).emit("guess-feedback", {
-        type: "success",
-        message: `${jogadorAtual.playerName} acertou a letra ${letraNormalizada.toUpperCase()}.`
-      });
+    partida.processingGuess = true;
+    try {
+      limparTemporizadorTurno(partida);
+      partida.attemptedLetters.add(letraNormalizada);
+      if (partida.word.includes(letraNormalizada)) {
+        partida.correctLetters.add(letraNormalizada);
+        io.to(partida.gameId).emit("guess-feedback", {
+          type: "success",
+          message: `${jogadorAtual.playerName} acertou a letra ${letraNormalizada.toUpperCase()}!`
+        });
 
-      const palavraCompleta = [...new Set(partida.word.split(""))].every((caractere) => partida.correctLetters.has(caractere));
-      if (palavraCompleta) {
-        encerrarPartida(
-          partida,
-          jogadorAtual.playerId,
-          partida.players.find((entrada) => entrada.playerId !== jogadorAtual.playerId)?.playerId || null,
-          "word-complete"
-        );
-        return;
+        const palavraCompleta = [...new Set(partida.word.split(""))].every((caractere) => partida.correctLetters.has(caractere));
+        if (palavraCompleta) {
+          encerrarPartida(
+            partida,
+            jogadorAtual.playerId,
+            partida.players.find((entrada) => entrada.playerId !== jogadorAtual.playerId)?.playerId || null,
+            "word-complete"
+          );
+          return;
+        }
+      } else {
+        jogadorAtual.errors += 1;
+        partida.wrongLetters.push(letraNormalizada);
+        const partesDesenhas = PARTES_DA_FORCA.slice(0, jogadorAtual.errors);
+        io.to(partida.gameId).emit("player-hangman-update", {
+          playerId: jogadorAtual.playerId,
+          playerName: jogadorAtual.playerName,
+          errors: jogadorAtual.errors,
+          maxErrors: REGRAS_DO_JOGO.maxErrors,
+          hangmanPartsDrawn: partesDesenhas
+        });
+
+        io.to(partida.gameId).emit("guess-feedback", {
+          type: "warning",
+          message: `${jogadorAtual.playerName} errou a letra ${letraNormalizada.toUpperCase()}. Adicionada parte à forca de ${jogadorAtual.playerName}!`
+        });
+
+        if (jogadorAtual.errors >= REGRAS_DO_JOGO.maxErrors) {
+          const adversario = partida.players.find((entrada) => entrada.playerId !== jogadorAtual.playerId);
+          encerrarPartida(partida, adversario ? adversario.playerId : null, jogadorAtual.playerId, "max-errors");
+          return;
+        }
+
+        avancarTurno(partida);
       }
-    } else {
-      jogadorAtual.errors += 1;
-      partida.wrongLetters.push(letraNormalizada);
-      io.to(partida.gameId).emit("guess-feedback", {
-        type: "warning",
-        message: `${jogadorAtual.playerName} errou a letra ${letraNormalizada.toUpperCase()}.`
-      });
 
-      if (jogadorAtual.errors >= REGRAS_DO_JOGO.maxErrors) {
-        const adversario = partida.players.find((entrada) => entrada.playerId !== jogadorAtual.playerId);
-        encerrarPartida(partida, adversario ? adversario.playerId : null, jogadorAtual.playerId, "max-errors");
-        return;
-      }
-
-      avancarTurno(partida);
+      registrarTempoLimiteTurno(partida);
+      emitirEstadoPartida(partida);
+      await sincronizarEstadoPartida(partida);
+    } finally {
+      partida.processingGuess = false;
     }
-
-    registrarTempoLimiteTurno(partida);
-    emitirEstadoPartida(partida);
-    await sincronizarEstadoPartida(partida);
   });
 
   socket.on("request-hint", async ({ gameId, playerId }) => {

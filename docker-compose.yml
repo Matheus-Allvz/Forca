@@ -1,15 +1,16 @@
 services:
   controller:
     container_name: controller
+    restart: unless-stopped
     build:
       context: .
       dockerfile: controller/Dockerfile
     environment:
-      PORT: ${CONTROLLER_PORT}
+      PORT: ${CONTROLLER_PORT:-3000}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
       RANKING_FILE: /app/data/ranking.json
     ports:
-      - "${CONTROLLER_PORT}:${CONTROLLER_PORT}"
+      - "${CONTROLLER_PORT:-3000}:${CONTROLLER_PORT:-3000}"
     volumes:
       - forca-ranking-data:/app/data
     depends_on:
@@ -20,6 +21,7 @@ services:
 
   game-server-1:
     container_name: game-server-1
+    restart: unless-stopped
     build:
       context: .
       dockerfile: game-server/Dockerfile
@@ -34,6 +36,7 @@ services:
 
   game-server-2:
     container_name: game-server-2
+    restart: unless-stopped
     build:
       context: .
       dockerfile: game-server/Dockerfile
@@ -48,6 +51,7 @@ services:
 
   game-server-3:
     container_name: game-server-3
+    restart: unless-stopped
     build:
       context: .
       dockerfile: game-server/Dockerfile
@@ -62,6 +66,7 @@ services:
 
   game-server-4:
     container_name: game-server-4
+    restart: unless-stopped
     build:
       context: .
       dockerfile: game-server/Dockerfile
