@@ -18,8 +18,27 @@ const botaoDesistir = document.querySelector("#surrender-button");
 const acoesPosJogo = document.querySelector("#post-game-actions");
 const botaoJogarNovamente = document.querySelector("#play-again-button");
 const botaoVoltarLobby = document.querySelector("#return-lobby-button");
-const legendaForca = document.querySelector("#gallows-caption");
-const estagioForca = document.querySelector("#gallows-stage");
+const legendaForca = document.querySelector("#gallows-caption-me") || document.querySelector("#gallows-caption");
+const estagioForca = document.querySelector("#gallows-stage-me") || document.querySelector("#gallows-stage");
+
+// Elementos da Arena de Duelo (Duas Forcas e Semáforo)
+const estagioForcaMe = document.querySelector("#gallows-stage-me");
+const estagioForcaOpponent = document.querySelector("#gallows-stage-opponent");
+const legendaForcaMe = document.querySelector("#gallows-caption-me");
+const legendaForcaOpponent = document.querySelector("#gallows-caption-opponent");
+const nomePlayerMe = document.querySelector("#name-player-me");
+const nomePlayerOpponent = document.querySelector("#name-player-opponent");
+const cardPlayerMe = document.querySelector("#card-player-me");
+const cardPlayerOpponent = document.querySelector("#card-player-opponent");
+const semaforoBadgeMe = document.querySelector("#semaphore-me");
+const semaforoBadgeOpponent = document.querySelector("#semaphore-opponent");
+const semaforoTextMe = document.querySelector("#semaphore-text-me");
+const semaforoTextOpponent = document.querySelector("#semaphore-text-opponent");
+const lightRed = document.querySelector("#light-red");
+const lightYellow = document.querySelector("#light-yellow");
+const lightGreen = document.querySelector("#light-green");
+const semaforoSublabel = document.querySelector("#semaphore-sublabel");
+
 const containerTeclado = document.querySelector("#virtual-keyboard");
 const dicaTeclado = document.querySelector("#keyboard-hint-text");
 const botaoTema = document.querySelector("#theme-toggle");
@@ -240,19 +259,81 @@ function adicionarLog(mensagem) {
   listaEventos.prepend(item);
 }
 
-// Renderização da Forca
-function renderizarForca(partes) {
-  document.querySelectorAll(".part").forEach((elemento) => {
-    elemento.classList.toggle("visible", partes.includes(elemento.dataset.part));
-  });
+// Renderização das Forcas de Duelo (Um boneco independente para cada jogador)
+function renderizarForca(partes, alvo = "me") {
+  const container = alvo === "opponent" ? estagioForcaOpponent : (estagioForcaMe || estagioForca);
+  if (container) {
+    container.querySelectorAll(".part").forEach((elemento) => {
+      elemento.classList.toggle("visible", partes.includes(elemento.dataset.part));
+    });
+  } else {
+    document.querySelectorAll(".part").forEach((elemento) => {
+      elemento.classList.toggle("visible", partes.includes(elemento.dataset.part));
+    });
+  }
 }
 
-function sacudirForca() {
-  if (!estagioForca) return;
-  estagioForca.classList.remove("shake");
-  void estagioForca.offsetWidth; // trigger reflow
-  estagioForca.classList.add("shake");
-  setTimeout(() => estagioForca.classList.remove("shake"), 500);
+function sacudirForca(alvo = "me") {
+  const container = alvo === "opponent" ? estagioForcaOpponent : (estagioForcaMe || estagioForca);
+  if (!container) return;
+  container.classList.remove("shake");
+  void container.offsetWidth; // trigger reflow
+  container.classList.add("shake");
+  setTimeout(() => container.classList.remove("shake"), 500);
+}
+
+function renderizarForcasDuelo(estado) {
+  if (!estado || !Array.isArray(estado.players)) return;
+
+  const me = estado.players.find((p) => p.playerId === estado.viewerPlayerId) || estado.players[0];
+  const opponent = estado.players.find((p) => p.playerId !== estado.viewerPlayerId) || estado.players[1];
+
+  // 1. Atualizar Forca e Status de Você
+  if (me) {
+    if (nomePlayerMe) nomePlayerMe.textContent = me.playerName || "Você";
+    const partesMe = me.hangmanPartsDrawn || [];
+    renderizarForca(partesMe, "me");
+    if (legendaForcaMe) {
+      legendaForcaMe.textContent = `Seus erros: ${me.errors || 0}/${estado.maxErrors || 6}`;
+    }
+    if (cardPlayerMe) {
+      cardPlayerMe.classList.toggle("active-turn", Boolean(me.isTurn));
+    }
+    if (semaforoBadgeMe && semaforoTextMe) {
+      semaforoBadgeMe.className = `semaphore-badge ${me.isTurn ? "turn-active" : "turn-waiting"}`;
+      semaforoTextMe.textContent = me.isTurn ? "🟢 Sua Vez" : "🔴 Aguarde";
+    }
+  }
+
+  // 2. Atualizar Forca e Status do Adversário
+  if (opponent) {
+    if (nomePlayerOpponent) nomePlayerOpponent.textContent = opponent.playerName || "Adversário";
+    const partesOpponent = opponent.hangmanPartsDrawn || [];
+    renderizarForca(partesOpponent, "opponent");
+    if (legendaForcaOpponent) {
+      legendaForcaOpponent.textContent = `Erros do adversário: ${opponent.errors || 0}/${estado.maxErrors || 6}`;
+    }
+    if (cardPlayerOpponent) {
+      cardPlayerOpponent.classList.toggle("active-turn", Boolean(opponent.isTurn));
+    }
+    if (semaforoBadgeOpponent && semaforoTextOpponent) {
+      semaforoBadgeOpponent.className = `semaphore-badge ${opponent.isTurn ? "turn-active" : "turn-waiting"}`;
+      semaforoTextOpponent.textContent = opponent.isTurn ? "🟢 Vez dele" : "🔴 Aguardando";
+    }
+  }
+
+  // 3. Semáforo Central Distribuído
+  const meuTurno = Boolean(me && me.isTurn);
+  if (lightGreen && lightYellow && lightRed) {
+    lightGreen.classList.toggle("active", meuTurno && estado.status === "playing");
+    lightYellow.classList.toggle("active", estado.status !== "playing");
+    lightRed.classList.toggle("active", !meuTurno && estado.status === "playing");
+  }
+  if (semaforoSublabel) {
+    semaforoSublabel.textContent = estado.status === "playing"
+      ? (meuTurno ? "🟢 SUA VEZ" : "🔴 ADVERSÁRIO")
+      : "🟡 AGUARDANDO";
+  }
 }
 
 function atualizarFaixaTurno(tipo, mensagem) {
@@ -590,12 +671,12 @@ function renderizarEstadoPartida(estado) {
   botaoDica.disabled = estado.hintRequested || !podeJogar;
   
   renderizarLetrasErradas(estado.wrongLetters);
-  renderizarForca(estado.hangmanPartsDrawn);
+  renderizarForcasDuelo(estado);
   renderizarJogadores(estado);
   atualizarTecladoVirtual(estado, podeJogar);
 
-  if (legendaForca) {
-    legendaForca.textContent = `Erros visíveis: ${novosErros}/${estado.maxErrors}`;
+  if (legendaForcaMe && visualizador) {
+    legendaForcaMe.textContent = `Seus erros: ${visualizador.errors}/${estado.maxErrors}`;
   }
 
   campoPalpite.disabled = !podeJogar;
@@ -718,6 +799,26 @@ function iniciarRecuperacao() {
   consultarFailover();
 }
 
+function criarSocketPartida(rawUrl) {
+  try {
+    const urlObj = new URL(rawUrl, window.location.origin);
+    const basePath = urlObj.pathname.replace(/\/+$/, "");
+    const options = {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 15,
+      reconnectionDelay: 1000,
+      timeout: 10000
+    };
+    if (basePath && basePath !== "") {
+      options.path = `${basePath}/socket.io`;
+    }
+    return io(urlObj.origin, options);
+  } catch {
+    return io(rawUrl, { transports: ["websocket", "polling"] });
+  }
+}
+
 function conectarNaPartida() {
   if (!dadosPartida?.serverUrl || !dadosPartida?.gameId || !sessao?.playerId || !sessao?.reconnectToken) {
     window.location.href = "/";
@@ -732,7 +833,7 @@ function conectarNaPartida() {
   }
 
   desconexaoEsperada = false;
-  socketPartida = io(dadosPartida.serverUrl, { transports: ["websocket", "polling"] });
+  socketPartida = criarSocketPartida(dadosPartida.serverUrl);
   adicionarLog(`Conectando ao servidor ${dadosPartida.serverUrl}...`);
 
   socketPartida.on("connect", () => {
@@ -761,6 +862,16 @@ function conectarNaPartida() {
 
   socketPartida.on("game-state", (estado) => {
     renderizarEstadoPartida(estado);
+  });
+
+  socketPartida.on("player-hangman-update", ({ playerId, errors, hangmanPartsDrawn }) => {
+    if (playerId === sessao?.playerId) {
+      sacudirForca("me");
+      renderizarForca(hangmanPartsDrawn, "me");
+    } else {
+      sacudirForca("opponent");
+      renderizarForca(hangmanPartsDrawn, "opponent");
+    }
   });
 
   socketPartida.on("guess-feedback", ({ message }) => {
@@ -860,7 +971,8 @@ socketController.on("match-found", (payload) => {
 // Inicialização
 inicializarTema();
 criarTecladoVirtual();
-renderizarForca([]);
+renderizarForca([], "me");
+renderizarForca([], "opponent");
 campoPalpite.disabled = true;
 formularioPalpite.querySelector("button").disabled = true;
 pararTemporizadorTurno();

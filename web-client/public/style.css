@@ -1049,6 +1049,198 @@ button:disabled {
 }
 
 /* ==========================================================================
+   DUEL ARENA (DUAS FORCAS INDEPENDENTES & SEMÁFORO DISTRIBUÍDO)
+   ========================================================================== */
+.duel-arena {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 20px;
+  align-items: center;
+  margin: 12px 0;
+}
+
+.player-gallows-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-card);
+  transition: border-color var(--trans-fast), box-shadow var(--trans-fast);
+}
+
+.player-gallows-card.active-turn {
+  border-color: var(--accent-emerald, #10b981);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.player-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.player-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-role-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+}
+
+.player-role-badge.self-badge {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--primary-light, #818cf8);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.player-role-badge.opp-badge {
+  background: rgba(244, 63, 94, 0.2);
+  color: var(--accent-rose, #f43f5e);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+.player-display-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.semaphore-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.semaphore-badge.turn-active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.semaphore-badge.turn-waiting {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.semaphore-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.semaphore-badge.turn-active .semaphore-led {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseLed 1.2s infinite;
+}
+
+.semaphore-badge.turn-waiting .semaphore-led {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+@keyframes pulseLed {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.25); }
+}
+
+.duel-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px;
+}
+
+.vs-badge {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  background: var(--surface-elevated);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-medium);
+}
+
+.traffic-semaphore {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 8px;
+  background: #0f172a;
+  border-radius: 18px;
+  border: 2px solid #334155;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.traffic-light {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  opacity: 0.25;
+  transition: opacity 0.3s, box-shadow 0.3s;
+}
+
+.traffic-light.red { background: #ef4444; }
+.traffic-light.yellow { background: #f59e0b; }
+.traffic-light.green { background: #10b981; }
+
+.traffic-light.active.red {
+  opacity: 1;
+  box-shadow: 0 0 12px #ef4444;
+}
+
+.traffic-light.active.yellow {
+  opacity: 1;
+  box-shadow: 0 0 12px #f59e0b;
+}
+
+.traffic-light.active.green {
+  opacity: 1;
+  box-shadow: 0 0 12px #10b981;
+}
+
+.semaphore-sublabel {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  max-width: 80px;
+  line-height: 1.2;
+}
+
+@media (max-width: 900px) {
+  .duel-arena {
+    grid-template-columns: 1fr;
+  }
+  .duel-center {
+    flex-direction: row;
+    justify-content: center;
+  }
+  .traffic-semaphore {
+    flex-direction: row;
+  }
+}
+
+/* ==========================================================================
    GALLOWS & HANGMAN STYLING
    ========================================================================== */
 .hangman-area {

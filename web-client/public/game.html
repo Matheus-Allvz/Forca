@@ -93,99 +93,172 @@
           </div>
         </div>
 
-        <!-- Hangman Gallows & Duel Cards -->
-        <div class="hangman-area">
-          <!-- Gallows Stage -->
-          <div class="gallows" id="gallows-stage">
-            <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Desenho da forca">
-              <defs>
-                <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#5a3d28" />
-                  <stop offset="46%" stop-color="#8c6142" />
-                  <stop offset="100%" stop-color="#523621" />
-                </linearGradient>
-                <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#4f46e5" />
-                  <stop offset="100%" stop-color="#312e81" />
-                </linearGradient>
-                <linearGradient id="skinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stop-color="#fcd34d" />
-                  <stop offset="100%" stop-color="#f59e0b" />
-                </linearGradient>
-                <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
-                </filter>
-              </defs>
+        <!-- Hangman Duel Arena: Uma forca independente com boneco para cada jogador -->
+        <div class="duel-arena" id="duel-arena">
+          <!-- Card & Forca: Jogador Local (Você) -->
+          <article class="player-gallows-card" id="card-player-me">
+            <header class="player-card-header">
+              <div class="player-identity">
+                <span class="player-role-badge self-badge">VOCÊ</span>
+                <h3 class="player-display-name" id="name-player-me">Você</h3>
+              </div>
+              <div class="semaphore-badge" id="semaphore-me">
+                <span class="semaphore-led"></span>
+                <span class="semaphore-text" id="semaphore-text-me">Aguardando</span>
+              </div>
+            </header>
 
-              <!-- Floor shadow -->
-              <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.35)" />
-              
-              <!-- Gallows Base Platform -->
-              <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#523621" stroke="#3d2615" stroke-width="2" />
+            <div class="gallows" id="gallows-stage-me">
+              <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Forca do seu jogador">
+                <defs>
+                  <linearGradient id="woodGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#5a3d28" />
+                    <stop offset="46%" stop-color="#8c6142" />
+                    <stop offset="100%" stop-color="#523621" />
+                  </linearGradient>
+                  <linearGradient id="bodyGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#4f46e5" />
+                    <stop offset="100%" stop-color="#312e81" />
+                  </linearGradient>
+                  <linearGradient id="skinGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#fcd34d" />
+                    <stop offset="100%" stop-color="#f59e0b" />
+                  </linearGradient>
+                  <filter id="softShadow1" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+                  </filter>
+                </defs>
 
-              <!-- Vertical beam -->
-              <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient)" filter="url(#softShadow)" />
-              
-              <!-- Horizontal top beam -->
-              <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient)" filter="url(#softShadow)" />
-              
-              <!-- Diagonal support brace -->
-              <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#6e492e" />
-              
-              <!-- Rope & Noose ring -->
-              <rect x="187" y="56" width="6" height="32" rx="3" fill="#d97706" />
-              <circle cx="190" cy="92" r="5" fill="#b45309" />
-              <rect x="188" y="96" width="4" height="12" rx="2" fill="#92400e" />
+                <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.35)" />
+                <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#523621" stroke="#3d2615" stroke-width="2" />
+                <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient1)" filter="url(#softShadow1)" />
+                <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient1)" filter="url(#softShadow1)" />
+                <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#6e492e" />
+                <rect x="187" y="56" width="6" height="32" rx="3" fill="#d97706" />
+                <circle cx="190" cy="92" r="5" fill="#b45309" />
+                <rect x="188" y="96" width="4" height="12" rx="2" fill="#92400e" />
 
-              <!-- Hangman Parts (6 parts) -->
-              <!-- Part 1: Head -->
-              <g class="part head" data-part="cabeca">
-                <circle cx="190" cy="132" r="25" fill="url(#skinGradient)" stroke="#1e1b4b" stroke-width="4" />
-                <!-- Eyes -->
-                <circle cx="182" cy="128" r="3" fill="#1e1b4b" />
-                <circle cx="198" cy="128" r="3" fill="#1e1b4b" />
-                <!-- Mouth -->
-                <path d="M181 144 Q190 138 199 144" fill="none" stroke="#b45309" stroke-width="3" stroke-linecap="round" />
-              </g>
+                <!-- Boneco Jogador 1 (Você) -->
+                <g class="part head" data-part="cabeca">
+                  <circle cx="190" cy="132" r="25" fill="url(#skinGradient1)" stroke="#1e1b4b" stroke-width="4" />
+                  <circle cx="182" cy="128" r="3" fill="#1e1b4b" />
+                  <circle cx="198" cy="128" r="3" fill="#1e1b4b" />
+                  <path d="M181 144 Q190 138 199 144" fill="none" stroke="#b45309" stroke-width="3" stroke-linecap="round" />
+                </g>
+                <g class="part body" data-part="tronco">
+                  <rect x="186" y="156" width="8" height="14" rx="4" fill="#f59e0b" />
+                  <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient1)" stroke="#1e1b4b" stroke-width="3.5" stroke-linejoin="round" />
+                </g>
+                <g class="part arm-right" data-part="braco-direito">
+                  <path d="M176 176 L158 194 L142 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="140" cy="210" r="5" fill="#f59e0b" />
+                </g>
+                <g class="part arm-left" data-part="braco-esquerdo">
+                  <path d="M204 176 L222 194 L238 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="240" cy="210" r="5" fill="#f59e0b" />
+                </g>
+                <g class="part leg-right" data-part="perna-direita">
+                  <path d="M182 230 L174 258 L168 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M160 288 Q168 294 176 289" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                </g>
+                <g class="part leg-left" data-part="perna-esquerda">
+                  <path d="M198 230 L206 258 L212 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M212 289 Q220 294 228 288" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                </g>
+              </svg>
+              <p class="gallows-caption" id="gallows-caption-me">Seus erros: 0/6</p>
+            </div>
+          </article>
 
-              <!-- Part 2: Body / Torso -->
-              <g class="part body" data-part="tronco">
-                <rect x="186" y="156" width="8" height="14" rx="4" fill="#f59e0b" />
-                <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient)" stroke="#1e1b4b" stroke-width="3.5" stroke-linejoin="round" />
-              </g>
-
-              <!-- Part 3: Right Arm -->
-              <g class="part arm-right" data-part="braco-direito">
-                <path d="M176 176 L158 194 L142 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="140" cy="210" r="5" fill="#f59e0b" />
-              </g>
-
-              <!-- Part 4: Left Arm -->
-              <g class="part arm-left" data-part="braco-esquerdo">
-                <path d="M204 176 L222 194 L238 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-                <circle cx="240" cy="210" r="5" fill="#f59e0b" />
-              </g>
-
-              <!-- Part 5: Right Leg -->
-              <g class="part leg-right" data-part="perna-direita">
-                <path d="M182 230 L174 258 L168 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M160 288 Q168 294 176 289" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
-              </g>
-
-              <!-- Part 6: Left Leg -->
-              <g class="part leg-left" data-part="perna-esquerda">
-                <path d="M198 230 L206 258 L212 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M212 289 Q220 294 228 288" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
-              </g>
-            </svg>
-            <p class="gallows-caption" id="gallows-caption">Erros visíveis: 0/6</p>
+          <!-- Divisor Central: Semáforo Distribuído -->
+          <div class="duel-center">
+            <div class="vs-badge">VS</div>
+            <div class="traffic-semaphore" id="traffic-semaphore" title="Semáforo de Comunicação Distribuída (1 jogador por vez)">
+              <div class="traffic-light red" id="light-red" title="Aguardando liberação de vez"></div>
+              <div class="traffic-light yellow" id="light-yellow" title="Alternando turno"></div>
+              <div class="traffic-light green" id="light-green" title="Turno liberado"></div>
+            </div>
+            <span class="semaphore-sublabel" id="semaphore-sublabel">Semáforo: 1 por vez</span>
           </div>
 
-          <!-- Duel Players Arena -->
-          <div class="players" id="players">
-            <!-- Player cards rendered dynamically via JS -->
-          </div>
+          <!-- Card & Forca: Jogador Adversário -->
+          <article class="player-gallows-card" id="card-player-opponent">
+            <header class="player-card-header">
+              <div class="player-identity">
+                <span class="player-role-badge opp-badge">ADVERSÁRIO</span>
+                <h3 class="player-display-name" id="name-player-opponent">Adversário</h3>
+              </div>
+              <div class="semaphore-badge" id="semaphore-opponent">
+                <span class="semaphore-led"></span>
+                <span class="semaphore-text" id="semaphore-text-opponent">Aguardando</span>
+              </div>
+            </header>
+
+            <div class="gallows" id="gallows-stage-opponent">
+              <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Forca do adversário">
+                <defs>
+                  <linearGradient id="woodGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#5a3d28" />
+                    <stop offset="46%" stop-color="#8c6142" />
+                    <stop offset="100%" stop-color="#523621" />
+                  </linearGradient>
+                  <linearGradient id="bodyGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#e11d48" />
+                    <stop offset="100%" stop-color="#881337" />
+                  </linearGradient>
+                  <linearGradient id="skinGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#fed7aa" />
+                    <stop offset="100%" stop-color="#f97316" />
+                  </linearGradient>
+                  <filter id="softShadow2" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+                  </filter>
+                </defs>
+
+                <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.35)" />
+                <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#523621" stroke="#3d2615" stroke-width="2" />
+                <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient2)" filter="url(#softShadow2)" />
+                <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient2)" filter="url(#softShadow2)" />
+                <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#6e492e" />
+                <rect x="187" y="56" width="6" height="32" rx="3" fill="#d97706" />
+                <circle cx="190" cy="92" r="5" fill="#b45309" />
+                <rect x="188" y="96" width="4" height="12" rx="2" fill="#92400e" />
+
+                <!-- Boneco Jogador 2 (Adversário) -->
+                <g class="part head" data-part="cabeca">
+                  <circle cx="190" cy="132" r="25" fill="url(#skinGradient2)" stroke="#1e1b4b" stroke-width="4" />
+                  <circle cx="182" cy="128" r="3" fill="#1e1b4b" />
+                  <circle cx="198" cy="128" r="3" fill="#1e1b4b" />
+                  <path d="M181 144 Q190 138 199 144" fill="none" stroke="#b45309" stroke-width="3" stroke-linecap="round" />
+                </g>
+                <g class="part body" data-part="tronco">
+                  <rect x="186" y="156" width="8" height="14" rx="4" fill="#f97316" />
+                  <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient2)" stroke="#1e1b4b" stroke-width="3.5" stroke-linejoin="round" />
+                </g>
+                <g class="part arm-right" data-part="braco-direito">
+                  <path d="M176 176 L158 194 L142 208" fill="none" stroke="#be123c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="140" cy="210" r="5" fill="#f97316" />
+                </g>
+                <g class="part arm-left" data-part="braco-esquerdo">
+                  <path d="M204 176 L222 194 L238 208" fill="none" stroke="#be123c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="240" cy="210" r="5" fill="#f97316" />
+                </g>
+                <g class="part leg-right" data-part="perna-direita">
+                  <path d="M182 230 L174 258 L168 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M160 288 Q168 294 176 289" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                </g>
+                <g class="part leg-left" data-part="perna-esquerda">
+                  <path d="M198 230 L206 258 L212 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M212 289 Q220 294 228 288" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                </g>
+              </svg>
+              <p class="gallows-caption" id="gallows-caption-opponent">Erros do adversário: 0/6</p>
+            </div>
+          </article>
         </div>
+
+        <!-- Hidden container para compatibilidade de scripts legado -->
+        <div class="players hidden" id="players" style="display: none;"></div>
 
         <!-- Interactive Virtual Keyboard (A-Z) -->
         <div class="keyboard-section">
