@@ -1,5 +1,7 @@
 # Forca Distribuida
+
 **Alunos:** Lavínia Maria Moreira
+
 Projeto em Node.js demonstrando uma arquitetura distribuida, resiliente e em tempo real do jogo da forca:
 
 - **Produção:** [https://forca.matheus-alves.dev](https://forca.matheus-alves.dev)
