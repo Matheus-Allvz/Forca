@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Forca Distribuída | Partida em Tempo Real</title>
+    <title>Forca Distribuída | Arena de Combate 1v1</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
+    <!-- Screen Shake Wrapper / Screen Vignette -->
+    <div class="vignette-overlay" id="vignette-overlay"></div>
+
     <main class="layout">
       <!-- Global Top Navigation Bar -->
       <header class="site-nav">
@@ -22,6 +25,9 @@
           <a class="secondary-link" href="/monitor.html">
             <span>📊 Monitor</span>
           </a>
+          <a class="secondary-link" href="/ops.html" title="Painel Ops">
+            <span>⚡ Ops</span>
+          </a>
         </div>
       </header>
 
@@ -29,9 +35,9 @@
       <section class="panel hero compact-hero">
         <div class="monitor-header-row">
           <div>
-            <div class="eyebrow">⚔️ Arena Multijogador • 1v1</div>
+            <div class="eyebrow">⚔️ Arena Multijogador • Duelo 1v1</div>
             <h1 id="game-title" style="margin: 4px 0 6px;">Carregando partida...</h1>
-            <p class="subtitle" id="game-subtitle">Restaurando conexão com o servidor de jogo.</p>
+            <p class="subtitle" id="game-subtitle">Restaurando conexão com o cluster de servidores de jogo.</p>
           </div>
           <div>
             <button type="button" class="secondary-button danger-button" id="surrender-button">
@@ -54,11 +60,53 @@
           </div>
         </div>
 
+        <!-- Meta Bar: Theme & Difficulty Badges -->
+        <div class="arena-meta-bar">
+          <div class="arena-tag-badge theme-badge" id="theme">
+            🏷️ TEMA: <strong>Carregando...</strong>
+          </div>
+          <div class="arena-tag-badge difficulty-badge diff-medio" id="difficulty-badge">
+            ⚡ DIFICULDADE: <strong>Médio</strong>
+          </div>
+        </div>
+
+        <!-- Combat HUD: Real-time Player Stats -->
+        <div class="combat-hud-panel" id="combat-hud">
+          <div class="hud-stat-tile" title="Porcentagem de acertos sobre letras arriscadas">
+            <div class="hud-stat-icon">🎯</div>
+            <div class="hud-stat-content">
+              <span class="hud-stat-label">Precisão</span>
+              <strong class="hud-stat-value" id="stat-accuracy">100%</strong>
+            </div>
+          </div>
+          <div class="hud-stat-tile" title="Tempo médio de resposta nos seus lances">
+            <div class="hud-stat-icon">⚡</div>
+            <div class="hud-stat-content">
+              <span class="hud-stat-label">Tempo Médio</span>
+              <strong class="hud-stat-value" id="stat-avg-time">0.0s</strong>
+            </div>
+          </div>
+          <div class="hud-stat-tile" title="Sequência consecutiva de acertos">
+            <div class="hud-stat-icon" id="stat-streak-icon">🔥</div>
+            <div class="hud-stat-content">
+              <span class="hud-stat-label">Sequência</span>
+              <strong class="hud-stat-value" id="stat-streak">0x</strong>
+            </div>
+          </div>
+          <div class="hud-stat-tile" title="Tempo decorrido da partida">
+            <div class="hud-stat-icon">⏱️</div>
+            <div class="hud-stat-content">
+              <span class="hud-stat-label">Duração</span>
+              <strong class="hud-stat-value" id="stat-duration">00:00</strong>
+            </div>
+          </div>
+        </div>
+
         <!-- Secret Word & Wrong Letters Row -->
         <div class="status-grid">
           <!-- Word Tile Card -->
           <div class="word-box-card">
-            <div class="theme-pill" id="theme">🏷️ Tema: Carregando...</div>
+            <div class="word-card-label">Palavra Secreta</div>
             
             <div class="word-tiles" id="masked-word" aria-label="Palavra secreta">
               <span class="letter-tile blank"></span>
@@ -68,12 +116,32 @@
               <span class="letter-tile blank"></span>
             </div>
 
-            <div class="hint-container">
-              <button type="button" class="secondary-button" id="hint-toggle">
-                💡 Pedir dica
-              </button>
-              <div class="hint-pill" id="hint" hidden>
-                <span>Dica: aguardando dados da partida.</span>
+            <!-- Hint Consensus 2/2 Box -->
+            <div class="hint-consensus-card" id="hint-consensus-card">
+              <div class="hint-consensus-header">
+                <div class="hint-consensus-title">
+                  <span class="hint-pulse-dot"></span>
+                  <span>💡 DICA SECRETA (Consenso Mútuo 2/2)</span>
+                </div>
+                <span class="hint-consensus-badge" id="hint-status-badge">0/2 Votos</span>
+              </div>
+              <div class="hint-consensus-body">
+                <p class="hint-consensus-desc" id="hint-consensus-desc">
+                  Ambos os jogadores devem solicitar a dica para que ela seja revelada sem penalidades.
+                </p>
+                <button type="button" class="hint-consensus-btn" id="hint-toggle">
+                  <span class="hint-btn-icon">💡</span>
+                  <span id="hint-btn-text">Pedir Dica (0/2)</span>
+                </button>
+              </div>
+              <div class="hint-revealed-box hidden" id="hint-revealed-box">
+                <div class="hint-gold-glow"></div>
+                <div class="hint-revealed-content">
+                  <span class="hint-sparkle">✨</span>
+                  <div class="hint-pill" id="hint">
+                    <span>Dica: aguardando dados da partida.</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -86,14 +154,14 @@
                 Erros
               </span>
             </div>
-            <p class="subtitle" style="font-size: 0.85rem; margin: 4px 0 8px;">Letras já testadas que não existem na palavra:</p>
+            <p class="subtitle" style="font-size: 0.85rem; margin: 4px 0 8px;">Letras já tentadas que não pertencem à palavra:</p>
             <div class="wrong-letters-rack" id="wrong-letters">
               <span class="wrong-none">Nenhuma letra errada ainda</span>
             </div>
           </div>
         </div>
 
-        <!-- Hangman Duel Arena: Uma forca independente com boneco para cada jogador -->
+        <!-- Hangman Duel Arena: Duas forcas estilizadas com neon glow -->
         <div class="duel-arena" id="duel-arena">
           <!-- Card & Forca: Jogador Local (Você) -->
           <article class="player-gallows-card" id="card-player-me">
@@ -109,61 +177,75 @@
             </header>
 
             <div class="gallows" id="gallows-stage-me">
-              <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Forca do seu jogador">
+              <svg class="gallows-svg neon-me" viewBox="0 0 320 360" aria-label="Forca do seu jogador">
                 <defs>
                   <linearGradient id="woodGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#5a3d28" />
-                    <stop offset="46%" stop-color="#8c6142" />
-                    <stop offset="100%" stop-color="#523621" />
+                    <stop offset="0%" stop-color="#1e1b4b" />
+                    <stop offset="46%" stop-color="#312e81" />
+                    <stop offset="100%" stop-color="#1e1b4b" />
                   </linearGradient>
                   <linearGradient id="bodyGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#4f46e5" />
-                    <stop offset="100%" stop-color="#312e81" />
+                    <stop offset="0%" stop-color="#6366f1" />
+                    <stop offset="100%" stop-color="#4338ca" />
                   </linearGradient>
                   <linearGradient id="skinGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#fcd34d" />
-                    <stop offset="100%" stop-color="#f59e0b" />
+                    <stop offset="0%" stop-color="#38bdf8" />
+                    <stop offset="100%" stop-color="#0284c7" />
                   </linearGradient>
                   <filter id="softShadow1" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.5" />
+                  </filter>
+                  <filter id="neonCyanGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1" />
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2" />
+                    <feMerge>
+                      <feMergeNode in="blur2" />
+                      <feMergeNode in="blur1" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
                   </filter>
                 </defs>
 
-                <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.35)" />
-                <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#523621" stroke="#3d2615" stroke-width="2" />
-                <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient1)" filter="url(#softShadow1)" />
-                <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient1)" filter="url(#softShadow1)" />
-                <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#6e492e" />
-                <rect x="187" y="56" width="6" height="32" rx="3" fill="#d97706" />
-                <circle cx="190" cy="92" r="5" fill="#b45309" />
-                <rect x="188" y="96" width="4" height="12" rx="2" fill="#92400e" />
+                <!-- Base e Forca de Metal Cyberpunk -->
+                <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.45)" />
+                <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#0f172a" stroke="#6366f1" stroke-width="2" />
+                <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient1)" stroke="#4338ca" stroke-width="2" filter="url(#softShadow1)" />
+                <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient1)" stroke="#4338ca" stroke-width="2" filter="url(#softShadow1)" />
+                <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#312e81" stroke="#4f46e5" stroke-width="1.5" />
+                
+                <!-- Corda Neon com Efeito Eletrizante -->
+                <g class="rope-group">
+                  <rect class="rope-element" x="187" y="56" width="6" height="32" rx="3" fill="#f59e0b" />
+                  <circle class="rope-element" cx="190" cy="92" r="5" fill="#f59e0b" />
+                  <rect class="rope-element" x="188" y="96" width="4" height="12" rx="2" fill="#d97706" />
+                </g>
 
-                <!-- Boneco Jogador 1 (Você) -->
+                <!-- Boneco Jogador 1 (Você) - Estilo Cibernético Neon -->
                 <g class="part head" data-part="cabeca">
-                  <circle cx="190" cy="132" r="25" fill="url(#skinGradient1)" stroke="#1e1b4b" stroke-width="4" />
-                  <circle cx="182" cy="128" r="3" fill="#1e1b4b" />
-                  <circle cx="198" cy="128" r="3" fill="#1e1b4b" />
-                  <path d="M181 144 Q190 138 199 144" fill="none" stroke="#b45309" stroke-width="3" stroke-linecap="round" />
+                  <circle cx="190" cy="132" r="25" fill="url(#skinGradient1)" stroke="#67e8f9" stroke-width="3.5" />
+                  <circle cx="182" cy="128" r="3.5" fill="#0c4a6e" />
+                  <circle cx="198" cy="128" r="3.5" fill="#0c4a6e" />
+                  <path d="M181 144 Q190 138 199 144" fill="none" stroke="#0c4a6e" stroke-width="3" stroke-linecap="round" />
                 </g>
                 <g class="part body" data-part="tronco">
-                  <rect x="186" y="156" width="8" height="14" rx="4" fill="#f59e0b" />
-                  <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient1)" stroke="#1e1b4b" stroke-width="3.5" stroke-linejoin="round" />
+                  <rect x="186" y="156" width="8" height="14" rx="4" fill="#38bdf8" />
+                  <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient1)" stroke="#818cf8" stroke-width="3" stroke-linejoin="round" />
                 </g>
                 <g class="part arm-right" data-part="braco-direito">
-                  <path d="M176 176 L158 194 L142 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-                  <circle cx="140" cy="210" r="5" fill="#f59e0b" />
+                  <path d="M176 176 L158 194 L142 208" fill="none" stroke="#818cf8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="140" cy="210" r="5" fill="#38bdf8" />
                 </g>
                 <g class="part arm-left" data-part="braco-esquerdo">
-                  <path d="M204 176 L222 194 L238 208" fill="none" stroke="#4338ca" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-                  <circle cx="240" cy="210" r="5" fill="#f59e0b" />
+                  <path d="M204 176 L222 194 L238 208" fill="none" stroke="#818cf8" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="240" cy="210" r="5" fill="#38bdf8" />
                 </g>
                 <g class="part leg-right" data-part="perna-direita">
-                  <path d="M182 230 L174 258 L168 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M160 288 Q168 294 176 289" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                  <path d="M182 230 L174 258 L168 286" fill="none" stroke="#312e81" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M160 288 Q168 294 176 289" fill="none" stroke="#4f46e5" stroke-width="6" stroke-linecap="round" />
                 </g>
                 <g class="part leg-left" data-part="perna-esquerda">
-                  <path d="M198 230 L206 258 L212 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M212 289 Q220 294 228 288" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                  <path d="M198 230 L206 258 L212 286" fill="none" stroke="#312e81" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M212 289 Q220 294 228 288" fill="none" stroke="#4f46e5" stroke-width="6" stroke-linecap="round" />
                 </g>
               </svg>
               <p class="gallows-caption" id="gallows-caption-me">Seus erros: 0/6</p>
@@ -173,7 +255,7 @@
           <!-- Divisor Central: Semáforo Distribuído -->
           <div class="duel-center">
             <div class="vs-badge">VS</div>
-            <div class="traffic-semaphore" id="traffic-semaphore" title="Semáforo de Comunicação Distribuída (1 jogador por vez)">
+            <div class="traffic-semaphore" id="traffic-semaphore" title="Semáforo Distribuído: 1 jogador por vez">
               <div class="traffic-light red" id="light-red" title="Aguardando liberação de vez"></div>
               <div class="traffic-light yellow" id="light-yellow" title="Alternando turno"></div>
               <div class="traffic-light green" id="light-green" title="Turno liberado"></div>
@@ -195,61 +277,66 @@
             </header>
 
             <div class="gallows" id="gallows-stage-opponent">
-              <svg class="gallows-svg" viewBox="0 0 320 360" aria-label="Forca do adversário">
+              <svg class="gallows-svg neon-opponent" viewBox="0 0 320 360" aria-label="Forca do adversário">
                 <defs>
                   <linearGradient id="woodGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#5a3d28" />
-                    <stop offset="46%" stop-color="#8c6142" />
-                    <stop offset="100%" stop-color="#523621" />
+                    <stop offset="0%" stop-color="#4c0519" />
+                    <stop offset="46%" stop-color="#881337" />
+                    <stop offset="100%" stop-color="#4c0519" />
                   </linearGradient>
                   <linearGradient id="bodyGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#e11d48" />
-                    <stop offset="100%" stop-color="#881337" />
+                    <stop offset="0%" stop-color="#f43f5e" />
+                    <stop offset="100%" stop-color="#be123c" />
                   </linearGradient>
                   <linearGradient id="skinGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#fed7aa" />
-                    <stop offset="100%" stop-color="#f97316" />
+                    <stop offset="0%" stop-color="#fb7185" />
+                    <stop offset="100%" stop-color="#e11d48" />
                   </linearGradient>
                   <filter id="softShadow2" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.5" />
                   </filter>
                 </defs>
 
-                <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.35)" />
-                <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#523621" stroke="#3d2615" stroke-width="2" />
-                <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient2)" filter="url(#softShadow2)" />
-                <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient2)" filter="url(#softShadow2)" />
-                <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#6e492e" />
-                <rect x="187" y="56" width="6" height="32" rx="3" fill="#d97706" />
-                <circle cx="190" cy="92" r="5" fill="#b45309" />
-                <rect x="188" y="96" width="4" height="12" rx="2" fill="#92400e" />
+                <!-- Base e Forca de Metal Cyberpunk Vermelho -->
+                <ellipse cx="160" cy="334" rx="116" ry="14" fill="rgba(0, 0, 0, 0.45)" />
+                <path d="M26 314 C104 306 216 306 294 314 L294 334 C214 342 106 342 26 334 Z" fill="#0f172a" stroke="#f43f5e" stroke-width="2" />
+                <rect x="52" y="36" width="20" height="280" rx="6" fill="url(#woodGradient2)" stroke="#be123c" stroke-width="2" filter="url(#softShadow2)" />
+                <rect x="52" y="36" width="154" height="20" rx="6" fill="url(#woodGradient2)" stroke="#be123c" stroke-width="2" filter="url(#softShadow2)" />
+                <rect x="66" y="54" width="18" height="114" rx="6" transform="rotate(38 66 54)" fill="#881337" stroke="#fb7185" stroke-width="1.5" />
+                
+                <!-- Corda Neon -->
+                <g class="rope-group">
+                  <rect class="rope-element" x="187" y="56" width="6" height="32" rx="3" fill="#f59e0b" />
+                  <circle class="rope-element" cx="190" cy="92" r="5" fill="#f59e0b" />
+                  <rect class="rope-element" x="188" y="96" width="4" height="12" rx="2" fill="#d97706" />
+                </g>
 
-                <!-- Boneco Jogador 2 (Adversário) -->
+                <!-- Boneco Jogador 2 (Adversário) - Estilo Cyberpunk Coral Neon -->
                 <g class="part head" data-part="cabeca">
-                  <circle cx="190" cy="132" r="25" fill="url(#skinGradient2)" stroke="#1e1b4b" stroke-width="4" />
-                  <circle cx="182" cy="128" r="3" fill="#1e1b4b" />
-                  <circle cx="198" cy="128" r="3" fill="#1e1b4b" />
-                  <path d="M181 144 Q190 138 199 144" fill="none" stroke="#b45309" stroke-width="3" stroke-linecap="round" />
+                  <circle cx="190" cy="132" r="25" fill="url(#skinGradient2)" stroke="#fda4af" stroke-width="3.5" />
+                  <circle cx="182" cy="128" r="3.5" fill="#4c0519" />
+                  <circle cx="198" cy="128" r="3.5" fill="#4c0519" />
+                  <path d="M181 144 Q190 138 199 144" fill="none" stroke="#4c0519" stroke-width="3" stroke-linecap="round" />
                 </g>
                 <g class="part body" data-part="tronco">
-                  <rect x="186" y="156" width="8" height="14" rx="4" fill="#f97316" />
-                  <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient2)" stroke="#1e1b4b" stroke-width="3.5" stroke-linejoin="round" />
+                  <rect x="186" y="156" width="8" height="14" rx="4" fill="#fb7185" />
+                  <path d="M174 168 Q190 162 206 168 L206 230 Q190 236 174 230 Z" fill="url(#bodyGradient2)" stroke="#fda4af" stroke-width="3" stroke-linejoin="round" />
                 </g>
                 <g class="part arm-right" data-part="braco-direito">
-                  <path d="M176 176 L158 194 L142 208" fill="none" stroke="#be123c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-                  <circle cx="140" cy="210" r="5" fill="#f97316" />
+                  <path d="M176 176 L158 194 L142 208" fill="none" stroke="#f43f5e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="140" cy="210" r="5" fill="#fda4af" />
                 </g>
                 <g class="part arm-left" data-part="braco-esquerdo">
-                  <path d="M204 176 L222 194 L238 208" fill="none" stroke="#be123c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
-                  <circle cx="240" cy="210" r="5" fill="#f97316" />
+                  <path d="M204 176 L222 194 L238 208" fill="none" stroke="#f43f5e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="240" cy="210" r="5" fill="#fda4af" />
                 </g>
                 <g class="part leg-right" data-part="perna-direita">
-                  <path d="M182 230 L174 258 L168 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M160 288 Q168 294 176 289" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                  <path d="M182 230 L174 258 L168 286" fill="none" stroke="#881337" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M160 288 Q168 294 176 289" fill="none" stroke="#fb7185" stroke-width="6" stroke-linecap="round" />
                 </g>
                 <g class="part leg-left" data-part="perna-esquerda">
-                  <path d="M198 230 L206 258 L212 286" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M212 289 Q220 294 228 288" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+                  <path d="M198 230 L206 258 L212 286" fill="none" stroke="#881337" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M212 289 Q220 294 228 288" fill="none" stroke="#fb7185" stroke-width="6" stroke-linecap="round" />
                 </g>
               </svg>
               <p class="gallows-caption" id="gallows-caption-opponent">Erros do adversário: 0/6</p>
@@ -264,7 +351,7 @@
         <div class="keyboard-section">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-              ⌨️ Teclado Virtual (ou digite no teclado físico)
+              ⌨️ Teclado Virtual Arcade (ou digite no teclado físico)
             </span>
             <span id="keyboard-hint-text" style="font-size: 0.8rem; color: var(--text-muted);">
               Clique ou pressione uma letra
