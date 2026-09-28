@@ -9,6 +9,9 @@ for ctrl in ctrl-primary ctrl-backup; do
   incus file push /home/deploy/forca/web-client/public/ops.html "$ctrl/opt/forca/web-client/public/ops.html"
   incus file push /home/deploy/forca/web-client/public/ops.js "$ctrl/opt/forca/web-client/public/ops.js"
   incus file push /home/deploy/forca/web-client/public/ops.css "$ctrl/opt/forca/web-client/public/ops.css"
+  incus file push /home/deploy/forca/web-client/public/game.js "$ctrl/opt/forca/web-client/public/game.js"
+  incus file push /home/deploy/forca/web-client/public/index.html "$ctrl/opt/forca/web-client/public/index.html"
+  incus file push /home/deploy/forca/web-client/public/monitor.html "$ctrl/opt/forca/web-client/public/monitor.html"
   incus exec "$ctrl" -- systemctl restart controller
 done
 
