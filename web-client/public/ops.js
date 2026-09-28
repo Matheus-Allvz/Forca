@@ -19,9 +19,10 @@
 
   const state = {
     operator: {
-      name: "Matheus Alves",
-      email: "operador@matheus-alves.dev",
+      name: "Operador",
+      email: "Identificando sessão...",
       role: "SRE Operator",
+      isAuthenticated: false,
     },
     cluster: {
       leader: "ctrl-primary",
@@ -297,13 +298,25 @@
       if (response.ok) {
         const data = await response.json();
         if (data.operator && data.operator !== "sistema") {
-          if (data.operator.includes("@")) {
+          state.operator.isAuthenticated = true;
+          if (data.operatorName) {
+            state.operator.name = data.operatorName;
+          }
+          if (data.operatorEmail) {
+            state.operator.email = data.operatorEmail;
+          } else if (data.operator.includes("@")) {
             state.operator.email = data.operator;
-            const userPart = data.operator.split("@")[0].replace(/[._-]/g, " ");
-            state.operator.name = userPart.charAt(0).toUpperCase() + userPart.slice(1);
-          } else {
+            if (!data.operatorName) {
+              const userPart = data.operator.split("@")[0].replace(/[._-]/g, " ");
+              state.operator.name = userPart.charAt(0).toUpperCase() + userPart.slice(1);
+            }
+          } else if (!data.operatorName) {
             state.operator.name = data.operator;
           }
+        } else {
+          state.operator.name = "Operador Local";
+          state.operator.email = "sessão local / sistema";
+          state.operator.isAuthenticated = false;
         }
       }
     } catch (e) {
@@ -312,9 +325,18 @@
 
     // 2. Extrai de parâmetros da URL caso enviados no redirecionamento do Auth Gateway
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("operator_name")) state.operator.name = urlParams.get("operator_name");
-    if (urlParams.get("operator_email")) state.operator.email = urlParams.get("operator_email");
-    if (urlParams.get("user")) state.operator.name = urlParams.get("user");
+    if (urlParams.get("operator_name")) {
+      state.operator.name = urlParams.get("operator_name");
+      state.operator.isAuthenticated = true;
+    }
+    if (urlParams.get("operator_email")) {
+      state.operator.email = urlParams.get("operator_email");
+      state.operator.isAuthenticated = true;
+    }
+    if (urlParams.get("user")) {
+      state.operator.name = urlParams.get("user");
+      state.operator.isAuthenticated = true;
+    }
 
     // 3. Atualiza UI com nome, email e avatar
     if (DOM.operatorName) DOM.operatorName.textContent = state.operator.name;
@@ -324,7 +346,7 @@
       const initials = parts.length > 1
         ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
         : parts[0].slice(0, 2).toUpperCase();
-      DOM.operatorAvatar.textContent = initials;
+      DOM.operatorAvatar.textContent = initials || "OP";
     }
   }
 
@@ -1168,7 +1190,7 @@
         targetNode: "game-node-1",
         replacementNode: "game-node-3",
         totalMttrSeconds: 1.37,
-        operator: "Matheus Alves",
+        operator: "sistema",
         type: "kill-node",
         state: "resolved",
         stages: [
@@ -1191,7 +1213,7 @@
     }
 
     if (DOM.fkpiMttr) DOM.fkpiMttr.textContent = `${inc.totalMttrSeconds || 1.37}s`;
-    if (DOM.fkpiOperator) DOM.fkpiOperator.textContent = inc.operator || "Matheus Alves";
+    if (DOM.fkpiOperator) DOM.fkpiOperator.textContent = inc.operator || "sistema";
     if (DOM.fkpiAction) DOM.fkpiAction.textContent = inc.type || "kill-node";
     if (DOM.fkpiQuorum) DOM.fkpiQuorum.textContent = inc.targetNode?.includes("ctrl") ? "Failover Ativado" : "Preservado (4 Nós)";
 
@@ -1491,15 +1513,23 @@
 
         // 1. Atualiza Operador
         if (telemetry.operator && telemetry.operator !== "sistema") {
-          if (telemetry.operator.includes("@")) {
+          state.operator.isAuthenticated = true;
+          if (telemetry.operatorName) {
+            state.operator.name = telemetry.operatorName;
+          }
+          if (telemetry.operatorEmail) {
+            state.operator.email = telemetry.operatorEmail;
+          } else if (telemetry.operator.includes("@")) {
             state.operator.email = telemetry.operator;
-            const userPart = telemetry.operator.split("@")[0].replace(/[._-]/g, " ");
-            state.operator.name = userPart.charAt(0).toUpperCase() + userPart.slice(1);
-          } else {
+            if (!telemetry.operatorName) {
+              const userPart = telemetry.operator.split("@")[0].replace(/[._-]/g, " ");
+              state.operator.name = userPart.charAt(0).toUpperCase() + userPart.slice(1);
+            }
+          } else if (!telemetry.operatorName) {
             state.operator.name = telemetry.operator;
           }
           if (DOM.operatorName) DOM.operatorName.textContent = state.operator.name;
-          if (DOM.operatorEmail) DOM.operatorEmail.textContent = state.operator.email;
+          if (DOM.operatorEmail) DOM.operatorEmail.textContent = state.operator.email || "Autenticado";
         }
 
         // 2. Atualiza Containers / Nós

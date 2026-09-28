@@ -59,13 +59,60 @@ novo_bloco = """forca.matheus-alves.dev {
 		uri strip_prefix /servers/game-server-6
 		reverse_proxy 10.10.10.103:4002
 	}
+	handle /logout {
+		redir https://auth.matheus-alves.dev/logout 302
+	}
+	handle /ops* {
+		forward_auth 127.0.0.1:8099 {
+			uri /api/auth/verify
+			copy_headers X-Auth-User X-Auth-Email X-Auth-Role
+		}
+		reverse_proxy 10.10.10.10:8088 10.10.10.20:8088 {
+			lb_policy first
+			lb_try_duration 4s
+			lb_try_interval 100ms
+			fail_duration 5s
+			health_uri /health
+			health_interval 2s
+			health_timeout 1s
+			health_status 2xx
+			transport http {
+				dial_timeout 800ms
+			}
+		}
+	}
+	handle /api/admin/* {
+		forward_auth 127.0.0.1:8099 {
+			uri /api/auth/verify
+			copy_headers X-Auth-User X-Auth-Email X-Auth-Role
+		}
+		reverse_proxy 10.10.10.10:8088 10.10.10.20:8088 {
+			lb_policy first
+			lb_try_duration 4s
+			lb_try_interval 100ms
+			fail_duration 5s
+			health_uri /health
+			health_interval 2s
+			health_timeout 1s
+			health_status 2xx
+			transport http {
+				dial_timeout 800ms
+			}
+		}
+	}
 	handle {
 		reverse_proxy 10.10.10.10:8088 10.10.10.20:8088 {
 			lb_policy first
+			lb_try_duration 4s
+			lb_try_interval 100ms
+			fail_duration 5s
 			health_uri /health
-			health_interval 3s
-			health_timeout 2s
+			health_interval 2s
+			health_timeout 1s
 			health_status 2xx
+			transport http {
+				dial_timeout 800ms
+			}
 		}
 	}
 	encode gzip zstd

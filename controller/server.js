@@ -1176,9 +1176,14 @@ app.get("/api/admin/telemetry", async (req, res) => {
   const finishedGames = [...partidas.values()].filter((g) => g && g.status === "finished").length;
   const healthyServersCount = obterServidoresSaudaveis().length;
 
+  const operatorEmail = req.headers ? (req.headers["x-auth-email"] || "") : "";
+  const operatorName = req.headers ? (req.headers["x-auth-user"] || operador) : operador;
+
   return res.json({
     timestamp: agoraIso(),
     operator: operador,
+    operatorEmail: operatorEmail,
+    operatorName: operatorName,
     containers,
     hostMetrics: {
       hostname: os.hostname(),
