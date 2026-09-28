@@ -18,8 +18,10 @@ const fs = require('fs');
 
 const CONFIG = {
   minHealthyNodes: 2,
-  pollIntervalMs: 2500,
-  httpTimeoutMs: 1500,
+  pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS, 10) || 2500,
+  httpTimeoutMs: parseInt(process.env.HTTP_TIMEOUT_MS, 10) || 1500,
+  controllerGraceMs: parseInt(process.env.CONTROLLER_FAILOVER_GRACE_MS, 10) || 60000,
+  workerRestartGraceMs: parseInt(process.env.WORKER_RESTART_GRACE_MS, 10) || 6000,
   logFile: '/var/log/forca-auto-heal.log',
   controllers: ['ctrl-primary', 'ctrl-backup'],
   workers: {
@@ -89,9 +91,9 @@ async function checkAndHealControllers(instanceMap) {
       const firstSeen = stoppedTimestamps.get(ctrl) || now;
       stoppedTimestamps.set(ctrl, firstSeen);
 
-      // Aguarda 60 segundos de janela de observação/carência de failover antes de ressuscitar (evita flapping)
+      // Aguarda janela de observação/carência de failover antes de ressuscitar (evita flapping)
       const elapsed = now - firstSeen;
-      if (elapsed >= 60000) {
+      if (elapsed >= CONFIG.controllerGraceMs) {
         log(`[AUTO-HEAL] Controller ${ctrl} parado há ${(elapsed / 1000).toFixed(1)}s. Ressuscitando container...`);
         try {
           runCmd(`incus start ${ctrl}`);
@@ -101,7 +103,7 @@ async function checkAndHealControllers(instanceMap) {
           log(`[ERRO] Falha ao religar controller ${ctrl}: ${err.message}`);
         }
       } else {
-        log(`[AUTO-HEAL] Controller ${ctrl} em observação de failover (${((60000 - elapsed) / 1000).toFixed(0)}s restantes antes de religar)`);
+        log(`[AUTO-HEAL] Controller ${ctrl} em observação de failover (${((CONFIG.controllerGraceMs - elapsed) / 1000).toFixed(0)}s restantes antes de religar)`);
       }
     } else if (inst.status === 'Running') {
       stoppedTimestamps.delete(ctrl);
@@ -119,7 +121,7 @@ async function checkAndHealWorkers(instanceMap) {
       stoppedTimestamps.set(nodeName, firstSeen);
 
       const elapsed = now - firstSeen;
-      if (elapsed >= 6000) {
+      if (elapsed >= CONFIG.workerRestartGraceMs) {
         log(`[AUTO-HEAL] Worker ${nodeName} parado há ${(elapsed / 1000).toFixed(1)}s. Religando container...`);
         try {
           runCmd(`incus start ${nodeName}`);
@@ -195,6 +197,14 @@ async function provisionSubstituteNode(nodeName = 'game-node-3') {
 
     const env4002 = `PORT=4002\\nSERVER_ID=node3-game-server-4002\\nCONTROLLER_URL=http://10.10.10.10:8088\\nPUBLIC_SERVER_URL=https://forca.matheus-alves.dev/servers/node3-p2\\nINTERNAL_SERVER_URL=http://10.10.10.103:4002\\n`;
     runCmd(`incus exec ${nodeName} -- bash -c "printf '${env4002}' > /etc/default/game-server-4002"`);
+
+    // Injeta a versão mais recente do código do game server no nó elástico a partir de um worker ativo ou do host
+    try {
+      runCmd(`incus exec game-node-2 -- cat /opt/forca/game-server/server.js | incus exec ${nodeName} -- sh -c "cat > /opt/forca/game-server/server.js"`);
+    } catch (syncErr) {
+      log(`[WARN] Tentando sync a partir do host: ${syncErr.message}`);
+      runCmd(`incus file push /opt/forca/game-server/server.js ${nodeName}/opt/forca/game-server/server.js 2>/dev/null || true`);
+    }
 
     runCmd(`incus exec ${nodeName} -- systemctl enable --now game-server@4001 game-server@4002`);
     log(`[4/4] Nó ${nodeName} ativo e pronto em ${((Date.now() - startTime) / 1000).toFixed(1)}s.`);
