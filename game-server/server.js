@@ -583,7 +583,13 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("request-hint", async ({ gameId, playerId }) => {
+  socket.on("request-hint", async (payload = {}) => {
+    const gameId = payload?.gameId || socket.data?.gameId;
+    const playerId = payload?.playerId || socket.data?.playerId;
+    if (!gameId || !playerId) {
+      return;
+    }
+
     const partida = partidas.get(gameId);
     if (!partida || partida.status === "finished") {
       return;
