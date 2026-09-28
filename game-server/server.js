@@ -182,14 +182,39 @@ function registrarTempoLimiteTurno(partida) {
       return;
     }
 
+    // 1. Aplica penalidade de erro ao jogador que deixou o tempo expirar
+    jogadorAtual.errors += 1;
+    const partesDesenhadas = PARTES_DA_FORCA.slice(0, jogadorAtual.errors);
+
+    io.to(partida.gameId).emit("player-hangman-update", {
+      playerId: jogadorAtual.playerId,
+      playerName: jogadorAtual.playerName,
+      errors: jogadorAtual.errors,
+      maxErrors: REGRAS_DO_JOGO.maxErrors,
+      hangmanPartsDrawn: partesDesenhadas
+    });
+
+    // 2. Se atingir o limite de erros, encerra a partida por forca/derrota
+    if (jogadorAtual.errors >= REGRAS_DO_JOGO.maxErrors) {
+      const adversario = partida.players.find((entrada) => entrada.playerId !== jogadorAtual.playerId);
+      io.to(partida.gameId).emit("guess-feedback", {
+        type: "error",
+        message: `Tempo de ${jogadorAtual.playerName} esgotado! Limite de erros atingido (${jogadorAtual.errors}/${REGRAS_DO_JOGO.maxErrors}).`
+      });
+      encerrarPartida(partida, adversario ? adversario.playerId : null, jogadorAtual.playerId, "max-errors");
+      await notificarControllerEncerramento(partida, adversario ? adversario.playerId : null, jogadorAtual.playerId, "max-errors");
+      return;
+    }
+
+    // 3. Caso contrário, avança a vez para o próximo jogador
     avancarTurno(partida);
     const proximoJogador = partida.players[partida.turnIndex];
     limparTemporizadorTurno(partida);
     registrarTempoLimiteTurno(partida);
 
     io.to(partida.gameId).emit("guess-feedback", {
-      type: "info",
-      message: `Tempo de ${jogadorAtual.playerName} esgotado. Vez de ${proximoJogador?.playerName || "aguardar"}.`
+      type: "warning",
+      message: `Tempo de ${jogadorAtual.playerName} esgotado (+1 erro adicionado à forca). Vez de ${proximoJogador?.playerName || "aguardar"}.`
     });
     emitirEstadoPartida(partida);
     await sincronizarEstadoPartida(partida);
@@ -372,9 +397,52 @@ app.post("/internal/restore-game", async (req, res) => {
 
 io.on("connection", (socket) => {
   socket.on("join-game", async ({ gameId, playerId, reconnectToken }) => {
-    const partida = partidas.get(gameId);
+    let partida = partidas.get(gameId);
     if (!partida) {
-      socket.emit("join-error", { message: "Partida nao encontrada." });
+      // Tentar resgatar snapshot do controller caso o servidor tenha acabado de reiniciar
+      try {
+        const clusterSecret = process.env.CLUSTER_SECRET || "forca-internal-secret-2026";
+        const resp = await fetch(`${urlController}/internal/game-snapshot/${gameId}`, {
+          headers: { "X-Cluster-Secret": clusterSecret }
+        });
+        if (resp.ok) {
+          const dados = await resp.json();
+          if (dados && dados.snapshot && dados.snapshot.gameId === gameId) {
+            console.log(`[JOIN-RECOVERY] Snapshot da partida ${gameId} recuperado do controller.`);
+            partida = {
+              gameId: dados.snapshot.gameId,
+              word: dados.snapshot.word,
+              topic: dados.snapshot.topic || null,
+              hint: dados.snapshot.hint,
+              hintRequested: Boolean(dados.snapshot.hintRequested),
+              status: dados.snapshot.status || "playing",
+              players: (dados.snapshot.players || []).map((jogador) => ({
+                ...jogador,
+                connected: false,
+                socketId: null,
+                disconnectTimer: null,
+                disconnectDeadline: null
+              })),
+              turnIndex: dados.snapshot.turnIndex || 0,
+              attemptedLetters: new Set(dados.snapshot.attemptedLetters || []),
+              wrongLetters: [...(dados.snapshot.wrongLetters || [])],
+              correctLetters: new Set(dados.snapshot.correctLetters || []),
+              turnTimer: null,
+              turnDeadline: null,
+              winnerPlayerId: dados.snapshot.winnerPlayerId || null,
+              loserPlayerId: dados.snapshot.loserPlayerId || null,
+              createdAt: dados.snapshot.createdAt || Date.now()
+            };
+            partidas.set(partida.gameId, partida);
+          }
+        }
+      } catch (err) {
+        console.warn(`[JOIN-RECOVERY] Erro ao buscar snapshot do controller para ${gameId}:`, err.message);
+      }
+    }
+
+    if (!partida) {
+      socket.emit("join-error", { message: "Partida nao encontrada ou em migracao." });
       return;
     }
 

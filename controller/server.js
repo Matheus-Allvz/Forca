@@ -677,15 +677,37 @@ app.get("/session/:playerId", (req, res) => {
     return res.status(404).json({ error: "Sessao nao encontrada" });
   }
 
+  // Sincronizar serverId da sessão com o serverId da partida atual caso tenha ocorrido migração
+  let serverIdAtual = session.serverId;
+  if (session.gameId && partidas.has(session.gameId)) {
+    const partidaAtual = partidas.get(session.gameId);
+    if (partidaAtual.serverId) {
+      serverIdAtual = partidaAtual.serverId;
+      session.serverId = partidaAtual.serverId;
+      session.serverPort = partidaAtual.serverPort;
+    }
+  }
+
+  const serverObj = serverIdAtual ? servidoresRegistrados.get(serverIdAtual) : null;
+  const serverUrl = serverObj ? obterUrlPublicaServidor(serverObj, req) : null;
+
   return res.json({
     playerId: session.playerId,
     playerName: session.playerName,
     reconnectToken: session.reconnectToken,
     status: session.status,
     gameId: session.gameId,
-    serverUrl: session.serverId ? obterUrlPublicaServidor(servidoresRegistrados.get(session.serverId), req) : null,
-    serverId: session.serverId || null
+    serverUrl: serverUrl,
+    serverId: serverIdAtual || null
   });
+});
+
+app.get("/internal/game-snapshot/:gameId", (req, res) => {
+  const partida = partidas.get(req.params.gameId);
+  if (!partida || !partida.snapshot) {
+    return res.status(404).json({ error: "Partida ou snapshot nao encontrado" });
+  }
+  return res.json({ snapshot: partida.snapshot });
 });
 
 // -------------------------------------------------------------
@@ -1356,6 +1378,19 @@ app.post("/api/admin/chaos/kill-process", async (req, res) => {
       operator: operador
     }, operador);
 
+    // Forçar migração imediata de qualquer partida ativa que estivesse no nó/porta afetados
+    const nodeSuffix = String(node).replace("game-node-", "node");
+    for (const partida of partidas.values()) {
+      if (partida && partida.status !== "finished") {
+        const matchNode = partida.serverId.includes(nodeSuffix);
+        const matchPort = !port || Number(partida.serverPort) === Number(port);
+        if (matchNode && matchPort) {
+          console.log(`[CHAOS] Forçando migração imediata da partida ${partida.gameId} afetada por kill-process...`);
+          await migrarPartida(partida);
+        }
+      }
+    }
+
     await reconciliarPartidasComFalha();
 
     return res.json({
@@ -1513,6 +1548,26 @@ app.post("/internal/register-server", async (req, res) => {
     publicUrl: publicUrl || null
   });
   resolverIncidente(serverId);
+
+  // Se o servidor acabou de reiniciar ou registrar, verificar se havia partidas ativas atribuídas a ele
+  const partidasDoServidor = [...partidas.values()].filter(
+    (p) => p && p.status !== "finished" && p.serverId === serverId
+  );
+
+  for (const partida of partidasDoServidor) {
+    if (partida.snapshot) {
+      console.log(`[REGISTER-SERVER] Restaurando snapshot da partida ${partida.gameId} no servidor ${serverId}...`);
+      try {
+        await restaurarPartidaNoServidor({ internalUrl }, partida.snapshot);
+      } catch (err) {
+        console.warn(`[REGISTER-SERVER] Falha ao restaurar partida ${partida.gameId}, migrando para outro nó:`, err.message);
+        await migrarPartida(partida);
+      }
+    } else {
+      await migrarPartida(partida);
+    }
+  }
+
   sincronizarCargaServidores();
   await tentarParearJogadores();
   await reconciliarPartidasComFalha();

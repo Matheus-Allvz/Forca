@@ -230,7 +230,19 @@ async function killProcess(node, port = null, servidoresRegistrados = new Map())
       await waitForOperation(execRes.operation, 10);
     }
 
-    return { ok: true, node, port, simulated: false };
+    const nodeSuffix = String(node).replace("game-node-", "node");
+    let affected = 0;
+    for (const s of servidoresRegistrados.values()) {
+      const matchNode = s.serverId.includes(nodeSuffix) || (s.internalUrl && s.internalUrl.includes(node));
+      const matchPort = !port || Number(s.publicPort) === Number(port);
+      if (matchNode && matchPort) {
+        s.lastHeartbeat = 0; // expire heartbeat immediately
+        s.previouslyHealthy = false;
+        affected += 1;
+      }
+    }
+
+    return { ok: true, node, port, affected, simulated: false };
   }
 
   // Simulation mode (dev / test environment without incus socket)

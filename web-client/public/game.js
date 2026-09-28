@@ -893,7 +893,13 @@ function conectarNaPartida() {
 
   socketPartida.on("join-error", ({ message }) => {
     adicionarLog(message);
-    atualizarFaixaTurno("waiting", message);
+    atualizarFaixaTurno("waiting", `⚠️ ${message} Aguardando realocação...`);
+    if (socketPartida) {
+      desconexaoEsperada = true;
+      socketPartida.removeAllListeners();
+      socketPartida.disconnect();
+      socketPartida = null;
+    }
     iniciarRecuperacao();
   });
 }
