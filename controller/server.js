@@ -26,6 +26,20 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../web-client/public")));
 
+const CLUSTER_SECRET = process.env.CLUSTER_SECRET || "forca-internal-secret-2026";
+function verificarTokenInterno(req, res, next) {
+  // Em ambiente de teste permite bypass para testes unitários locais que não passam header
+  if (process.env.NODE_ENV === "test" && !req.headers["x-cluster-secret"]) {
+    return next();
+  }
+  const token = req.headers["x-cluster-secret"] || req.query.secret;
+  if (!token || token !== CLUSTER_SECRET) {
+    return res.status(403).json({ error: "Acesso negado: token interno de cluster inválido ou ausente." });
+  }
+  next();
+}
+app.use("/internal", verificarTokenInterno);
+
 app.get(["/ops", "/ops/"], (_req, res) => {
   res.sendFile(path.join(__dirname, "../web-client/public/ops.html"));
 });
@@ -428,78 +442,94 @@ async function restaurarPartidaNoServidor(entradaServidor, snapshot) {
   return response.json();
 }
 
+let pareandoAtualmente = false;
+
 async function tentarParearJogadores() {
-  while (filaDeEspera.length >= 2) {
-    const servidoresSaudaveis = obterServidoresSaudaveis();
-    if (servidoresSaudaveis.length === 0) {
-      return;
-    }
+  if (pareandoAtualmente) {
+    return;
+  }
+  pareandoAtualmente = true;
 
-    const primeiro = filaDeEspera.shift();
-    const segundo = filaDeEspera.shift();
-    emitirAtualizacoesFila();
-
-    const sessaoA = sessoes.get(primeiro.playerId);
-    const sessaoB = sessoes.get(segundo.playerId);
-    if (!sessaoA || !sessaoB) {
-      continue;
-    }
-
-    const servidorSelecionado = servidoresSaudaveis[0];
-    const gameId = gerarId("game");
-    const jogadores = [sessaoA, sessaoB].map((sessao) => ({
-      playerId: sessao.playerId,
-      playerName: sessao.playerName,
-      reconnectToken: sessao.reconnectToken
-    }));
-
-    try {
-      await criarPartidaNoServidor(servidorSelecionado, gameId, jogadores);
-      partidas.set(gameId, {
-        gameId,
-        serverId: servidorSelecionado.serverId,
-        serverPort: servidorSelecionado.publicPort,
-        playerIds: jogadores.map((item) => item.playerId),
-        createdAt: Date.now(),
-        status: "assigned",
-        lastMigrationAt: null,
-        snapshot: null
-      });
-      sincronizarCargaServidores();
-
-      for (const sessao of [sessaoA, sessaoB]) {
-        sessao.status = "assigned";
-        sessao.gameId = gameId;
-        sessao.serverId = servidorSelecionado.serverId;
-        sessao.serverPort = servidorSelecionado.publicPort;
+  try {
+    while (filaDeEspera.length >= 2) {
+      const servidoresSaudaveis = obterServidoresSaudaveis();
+      if (servidoresSaudaveis.length === 0) {
+        return;
       }
-      registrarEvento("partida_criada", `Partida ${gameId} criada em ${servidorSelecionado.serverId}.`, {
-        gameId,
-        serverId: servidorSelecionado.serverId,
-        players: jogadores.map((jogador) => jogador.playerName)
-      }, "sistema");
 
-      io.to(sessaoA.controllerSocketId).emit("match-found", {
-        gameId,
-        playerId: sessaoA.playerId,
-        reconnectToken: sessaoA.reconnectToken,
-        serverUrl: obterUrlPublicaServidor(servidorSelecionado, io.sockets.sockets.get(sessaoA.controllerSocketId)?.handshake),
-        serverId: servidorSelecionado.serverId,
-        opponentName: sessaoB.playerName
-      });
-      io.to(sessaoB.controllerSocketId).emit("match-found", {
-        gameId,
-        playerId: sessaoB.playerId,
-        reconnectToken: sessaoB.reconnectToken,
-        serverUrl: obterUrlPublicaServidor(servidorSelecionado, io.sockets.sockets.get(sessaoB.controllerSocketId)?.handshake),
-        serverId: servidorSelecionado.serverId,
-        opponentName: sessaoA.playerName
-      });
-    } catch (error) {
-      enfileirarJogador(sessaoA);
-      enfileirarJogador(sessaoB);
-      return;
+      const primeiro = filaDeEspera.shift();
+      const segundo = filaDeEspera.shift();
+      emitirAtualizacoesFila();
+
+      const sessaoA = sessoes.get(primeiro.playerId);
+      const sessaoB = sessoes.get(segundo.playerId);
+      if (!sessaoA || !sessaoB) {
+        continue;
+      }
+
+      const servidorSelecionado = servidoresSaudaveis[0];
+      const gameId = gerarId("game");
+      const jogadores = [sessaoA, sessaoB].map((sessao) => ({
+        playerId: sessao.playerId,
+        playerName: sessao.playerName,
+        reconnectToken: sessao.reconnectToken
+      }));
+
+      // Proativamente incrementa carga antes de aguardar I/O para evitar race conditions em pareamentos simultâneos
+      servidorSelecionado.activeGames = (servidorSelecionado.activeGames || 0) + 1;
+
+      try {
+        await criarPartidaNoServidor(servidorSelecionado, gameId, jogadores);
+        partidas.set(gameId, {
+          gameId,
+          serverId: servidorSelecionado.serverId,
+          serverPort: servidorSelecionado.publicPort,
+          playerIds: jogadores.map((item) => item.playerId),
+          createdAt: Date.now(),
+          status: "assigned",
+          lastMigrationAt: null,
+          snapshot: null
+        });
+        sincronizarCargaServidores();
+
+        for (const sessao of [sessaoA, sessaoB]) {
+          sessao.status = "assigned";
+          sessao.gameId = gameId;
+          sessao.serverId = servidorSelecionado.serverId;
+          sessao.serverPort = servidorSelecionado.publicPort;
+        }
+        registrarEvento("partida_criada", `Partida ${gameId} criada em ${servidorSelecionado.serverId}.`, {
+          gameId,
+          serverId: servidorSelecionado.serverId,
+          players: jogadores.map((jogador) => jogador.playerName)
+        }, "sistema");
+
+        io.to(sessaoA.controllerSocketId).emit("match-found", {
+          gameId,
+          playerId: sessaoA.playerId,
+          reconnectToken: sessaoA.reconnectToken,
+          serverUrl: obterUrlPublicaServidor(servidorSelecionado, io.sockets.sockets.get(sessaoA.controllerSocketId)?.handshake),
+          serverId: servidorSelecionado.serverId,
+          opponentName: sessaoB.playerName
+        });
+        io.to(sessaoB.controllerSocketId).emit("match-found", {
+          gameId,
+          playerId: sessaoB.playerId,
+          reconnectToken: sessaoB.reconnectToken,
+          serverUrl: obterUrlPublicaServidor(servidorSelecionado, io.sockets.sockets.get(sessaoB.controllerSocketId)?.handshake),
+          serverId: servidorSelecionado.serverId,
+          opponentName: sessaoA.playerName
+        });
+      } catch (error) {
+        // Reverte activeGames em caso de falha/exceção na criação
+        servidorSelecionado.activeGames = Math.max(0, (servidorSelecionado.activeGames || 1) - 1);
+        enfileirarJogador(sessaoA);
+        enfileirarJogador(sessaoB);
+        return;
+      }
     }
+  } finally {
+    pareandoAtualmente = false;
   }
 }
 
@@ -942,11 +972,11 @@ function calcularMttr(list, fallback) {
   return Number(avg.toFixed(2));
 }
 
-function calcularUptimeEstimado() {
-  if (metricsRingBuffer.length === 0) return 99.98;
-  const healthySamples = metricsRingBuffer.filter((s) => (s.app?.healthyServers || 0) > 0).length;
-  const pct = (healthySamples / metricsRingBuffer.length) * 100;
-  return Number(Math.max(98.5, pct).toFixed(2));
+function calcularUptimeEstimado(samples = metricsRingBuffer) {
+  if (!samples || samples.length === 0) return 100;
+  const saudaveis = samples.filter((s) => s.app?.healthyServers >= 2).length;
+  const pct = (saudaveis / samples.length) * 100;
+  return Number(pct.toFixed(2));
 }
 
 function getHostCpuUsage() {
@@ -1203,7 +1233,7 @@ app.get("/api/admin/metrics/timeseries", (req, res) => {
     samples: filtered,
     annotations: matchingAnnotations,
     sre: {
-      uptimePercent: calcularUptimeEstimado(),
+      uptimePercent: calcularUptimeEstimado(filtered),
       mttrProcessSeconds: calcularMttr(sreTracker.mttrProcessList, 1.37),
       mttrNodeSeconds: calcularMttr(sreTracker.mttrNodeList, 7.8),
       totalAutoHealings: sreTracker.totalAutoHealings,
@@ -1797,5 +1827,7 @@ module.exports = {
   lifecycleIncidents,
   lifecycleAnnotations,
   registrarMorteNo,
-  registrarRenascimentoNo
+  registrarRenascimentoNo,
+  calcularUptimeEstimado,
+  tentarParearJogadores
 };

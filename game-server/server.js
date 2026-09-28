@@ -20,6 +20,7 @@ const idServidor = process.env.SERVER_ID || process.env.GAME_SERVER_ID || `game-
 const urlController = process.env.CONTROLLER_URL || "http://localhost:3000";
 const urlPublicaServidor = process.env.PUBLIC_SERVER_URL || process.env.GAME_SERVER_PUBLIC_URL || `http://localhost:${porta}`;
 const urlInterna = process.env.INTERNAL_SERVER_URL || process.env.GAME_SERVER_INTERNAL_URL || `http://localhost:${porta}`;
+const clusterSecret = process.env.CLUSTER_SECRET || "forca-internal-secret-2026";
 
 const partidas = new Map();
 let servidorRegistrado = false;
@@ -64,16 +65,21 @@ function serializarPartida(partida) {
 
 async function sincronizarEstadoPartida(partida) {
   try {
-    await fetch(`${urlController}/internal/game-state`, {
+    const resposta = await fetch(`${urlController}/internal/game-state`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-Cluster-Secret": clusterSecret
       },
       body: JSON.stringify({
         serverId: idServidor,
         game: serializarPartida(partida)
       })
     });
+
+    if (resposta.status === 409) {
+      encerrarPartidaPorConflito(partida.gameId, "conflito-409-controlador");
+    }
   } catch (error) {
     console.error("controller state sync failed", error.message);
   }
@@ -132,7 +138,8 @@ async function notificarControllerEncerramento(partida, motivo) {
     await fetch(`${urlController}/internal/game-finished`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-Cluster-Secret": clusterSecret
       },
       body: JSON.stringify({
         gameId: partida.gameId,
@@ -209,6 +216,43 @@ function encerrarPartida(partida, idJogadorVencedor, idJogadorPerdedor, motivo) 
   });
   sincronizarEstadoPartida(partida);
   notificarControllerEncerramento(partida, motivo);
+}
+
+function encerrarPartidaPorConflito(gameId, motivo = "conflito-409-controlador") {
+  const partida = partidas.get(gameId);
+  if (!partida) {
+    return;
+  }
+
+  limparTemporizadorTurno(partida);
+  partida.status = "finished";
+
+  for (const jogador of partida.players || []) {
+    if (jogador.disconnectTimer) {
+      clearTimeout(jogador.disconnectTimer);
+      jogador.disconnectTimer = null;
+      jogador.disconnectDeadline = null;
+    }
+  }
+
+  io.to(gameId).emit("game-error", {
+    code: "GAME_MIGRATED",
+    message: "Partida migrada para outro servidor.",
+    reason: motivo
+  });
+
+  io.in(gameId).socketsLeave(gameId);
+  for (const jogador of partida.players || []) {
+    if (jogador.socketId) {
+      const socket = io.sockets.sockets?.get(jogador.socketId);
+      if (socket) {
+        socket.leave(gameId);
+      }
+    }
+  }
+
+  partidas.delete(gameId);
+  console.warn(`[ZOMBIE CLEANUP] Partida ${gameId} descartada localmente devido a conflito 409 do controlador.`);
 }
 
 function registrarTempoLimiteDesconexao(partida, jogador) {
@@ -533,7 +577,8 @@ async function registrarNoController() {
   const resposta = await fetch(`${urlController}/internal/register-server`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-Cluster-Secret": clusterSecret
     },
     body: JSON.stringify({
       serverId: idServidor,
@@ -554,7 +599,8 @@ async function enviarHeartbeat() {
   const resposta = await fetch(`${urlController}/internal/heartbeat`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-Cluster-Secret": clusterSecret
     },
     body: JSON.stringify({
       serverId: idServidor,
