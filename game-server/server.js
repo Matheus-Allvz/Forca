@@ -40,9 +40,11 @@ function serializarPartida(partida) {
   return {
     gameId: partida.gameId,
     word: partida.word,
-    topic: partida.topic,
+    topic: partida.topic || "Geral",
+    difficulty: partida.difficulty || "Médio",
     hint: partida.hint,
-    hintRequested: partida.hintRequested,
+    hintRequested: Boolean(partida.hintRequested),
+    hintVotes: partida.hintVotes ? [...partida.hintVotes] : [],
     status: partida.status,
     players: partida.players.map((jogador) => ({
       playerId: jogador.playerId,
@@ -85,15 +87,19 @@ async function sincronizarEstadoPartida(partida) {
   }
 }
 
-function montarEstadoPublico(partida, idVisualizador) {
+function obterEstadoPublicoPartida(partida, idVisualizador) {
   const visualizador = partida.players.find((jogador) => jogador.playerId === idVisualizador);
+  const hintLiberada = Boolean(partida.hintRequested);
   return {
     gameId: partida.gameId,
     serverId: idServidor,
     status: partida.status,
-    topic: partida.topic,
-    hint: partida.hint,
-    hintRequested: partida.hintRequested,
+    topic: partida.topic || "Geral",
+    difficulty: partida.difficulty || "Médio",
+    hint: hintLiberada ? partida.hint : null,
+    hintRequested: hintLiberada,
+    hintVotesCount: partida.hintVotes ? partida.hintVotes.size : 0,
+    myHintVote: Boolean(partida.hintVotes && idVisualizador ? partida.hintVotes.has(idVisualizador) : false),
     maskedWord: mascararPalavra(partida.word, partida.correctLetters),
     attemptedLetters: [...partida.attemptedLetters],
     wrongLetters: [...partida.wrongLetters],
@@ -122,6 +128,8 @@ function montarEstadoPublico(partida, idVisualizador) {
     }
   };
 }
+
+const montarEstadoPublico = obterEstadoPublicoPartida;
 
 function emitirEstadoPartida(partida) {
   for (const jogador of partida.players) {
@@ -331,9 +339,11 @@ app.post("/internal/create-game", async (req, res) => {
   const partida = {
     gameId,
     word: palavraSorteada.palavra,
-    topic: palavraSorteada.tema,
+    topic: palavraSorteada.tema || "Geral",
+    difficulty: palavraSorteada.dificuldade || "Médio",
     hint: palavraSorteada.dica,
     hintRequested: false,
+    hintVotes: new Set(),
     status: "waiting-players",
     players: players.map((jogador) => ({
       ...jogador,
@@ -368,9 +378,11 @@ app.post("/internal/restore-game", async (req, res) => {
   const partida = {
     gameId: snapshot.gameId,
     word: snapshot.word,
-    topic: snapshot.topic || null,
+    topic: snapshot.topic || "Geral",
+    difficulty: snapshot.difficulty || "Médio",
     hint: snapshot.hint,
     hintRequested: Boolean(snapshot.hintRequested),
+    hintVotes: new Set(Array.isArray(snapshot.hintVotes) ? snapshot.hintVotes : []),
     status: snapshot.status || "waiting-players",
     players: snapshot.players.map((jogador) => ({
       ...jogador,
@@ -412,9 +424,11 @@ io.on("connection", (socket) => {
             partida = {
               gameId: dados.snapshot.gameId,
               word: dados.snapshot.word,
-              topic: dados.snapshot.topic || null,
+              topic: dados.snapshot.topic || "Geral",
+              difficulty: dados.snapshot.difficulty || "Médio",
               hint: dados.snapshot.hint,
               hintRequested: Boolean(dados.snapshot.hintRequested),
+              hintVotes: new Set(Array.isArray(dados.snapshot.hintVotes) ? dados.snapshot.hintVotes : []),
               status: dados.snapshot.status || "playing",
               players: (dados.snapshot.players || []).map((jogador) => ({
                 ...jogador,
@@ -492,7 +506,12 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const letraNormalizada = String(letter || "").trim().toLowerCase();
+    const letraNormalizada = String(letter || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
     if (!/^[a-z]$/.test(letraNormalizada)) {
       io.to(socket.id).emit("guess-feedback", { type: "error", message: "Envie apenas uma letra de A a Z." });
       return;
@@ -576,16 +595,38 @@ io.on("connection", (socket) => {
       return;
     }
 
+    if (!partida.hintVotes) {
+      partida.hintVotes = new Set();
+    }
+
     if (partida.hintRequested) {
       emitirEstadoPartida(partida);
       return;
     }
 
-    partida.hintRequested = true;
-    io.to(partida.gameId).emit("guess-feedback", {
-      type: "info",
-      message: `${jogador.playerName} pediu a dica.`
-    });
+    if (partida.hintVotes.has(playerId)) {
+      io.to(socket.id).emit("guess-feedback", {
+        type: "info",
+        message: `${jogador.playerName}, você já votou para liberar a dica (1/2 votos necessários).`
+      });
+      return;
+    }
+
+    partida.hintVotes.add(playerId);
+
+    if (partida.hintVotes.size === 1) {
+      io.to(partida.gameId).emit("guess-feedback", {
+        type: "info",
+        message: `${jogador.playerName} votou para liberar a dica (1/2 votos necessários)`
+      });
+    } else if (partida.hintVotes.size >= 2) {
+      partida.hintRequested = true;
+      io.to(partida.gameId).emit("guess-feedback", {
+        type: "success",
+        message: "💡 Dica liberada com sucesso por consenso dos 2 jogadores!"
+      });
+    }
+
     emitirEstadoPartida(partida);
     await sincronizarEstadoPartida(partida);
   });
@@ -695,8 +736,20 @@ async function garantirRegistroNoController() {
   }
 }
 
-server.listen(porta, async () => {
-  console.log(`${idServidor} listening on ${urlPublicaServidor}`);
-  await garantirRegistroNoController();
-  setInterval(garantirRegistroNoController, 5_000);
-});
+if (require.main === module) {
+  server.listen(porta, async () => {
+    console.log(`${idServidor} listening on ${urlPublicaServidor}`);
+    await garantirRegistroNoController();
+    setInterval(garantirRegistroNoController, 5_000);
+  });
+}
+
+module.exports = {
+  app,
+  server,
+  partidas,
+  sortearPalavra,
+  serializarPartida,
+  obterEstadoPublicoPartida,
+  montarEstadoPublico
+};
