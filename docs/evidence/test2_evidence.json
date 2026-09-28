@@ -1,0 +1,42 @@
+{
+  "test": "Teste 2: Queda de N\u00f3 Worker e Auto-Healing El\u00e1stico",
+  "chaos_target": "game-node-1",
+  "substitute_node": "game-node-3",
+  "substitute_ip": "10.10.10.103",
+  "substitute_ports": [
+    4001,
+    4002
+  ],
+  "timestamp_chaos_t0": "2026-09-26T12:47:03.350Z",
+  "timestamp_launched": "2026-09-26T12:47:05.123858+00:00",
+  "timestamp_healthy": "2026-09-26T12:47:21.196200+00:00",
+  "timestamp_registered": "2026-09-26T12:47:21.196200+00:00",
+  "mttr_seconds": 17.85,
+  "success": true,
+  "health_p1": "{\"status\":\"ok\",\"service\":\"node3-game-server-4001\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:47:21.198Z\"}",
+  "health_p2": "{\"status\":\"ok\",\"service\":\"node3-game-server-4002\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:47:21.204Z\"}",
+  "daemon_logs": [
+    "[2026-09-26T12:47:04.357Z] [AUTO-HEAL] ALERTA: Pool de n\u00f3s saud\u00e1veis (1) < m\u00ednimo (2). {\"game-node-1\":{\"status\":\"Stopped\",\"isHealthy\":false,\"healthyPorts\":0,\"totalPorts\":2,\"portChecks\":{}},\"game-node-2\":{\"status\":\"Running\",\"isHealthy\":true,\"healthyPorts\":2,\"totalPorts\":2,\"portChecks\":{\"4001\":{\"ok\":true,\"data\":{\"status\":\"ok\",\"service\":\"node2-game-server-4001\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:47:04.354Z\"}},\"4002\":{\"ok\":true,\"data\":{\"status\":\"ok\",\"service\":\"node2-game-server-4002\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:47:04.356Z\"}}}},\"game-node-3\":{\"status\":\"NOT_FOUND\",\"isHealthy\":false,\"healthyPorts\":0,\"totalPorts\":2,\"portChecks\":{}}}",
+    "[2026-09-26T12:47:04.357Z] [AUTO-HEAL] ALERTA: Pool de n\u00f3s saud\u00e1veis (1) < m\u00ednimo (2). {\"game-node-1\":{\"status\":\"Stopped\",\"isHealthy\":false,\"healthyPorts\":0,\"totalPorts\":2,\"portChecks\":{}},\"game-node-2\":{\"status\":\"Running\",\"isHealthy\":true,\"healthyPorts\":2,\"totalPorts\":2,\"portChecks\":{\"4001\":{\"ok\":true,\"data\":{\"status\":\"ok\",\"service\":\"node2-game-server-4001\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:47:04.354Z\"}},\"4002\":{\"ok\":true,\"data\":{\"status\":\"ok\",\"service\":\"node2-game-server-4002\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:47:04.356Z\"}}}},\"game-node-3\":{\"status\":\"NOT_FOUND\",\"isHealthy\":false,\"healthyPorts\":0,\"totalPorts\":2,\"portChecks\":{}}}",
+    "[2026-09-26T12:47:04.358Z] [AUTO-HEAL] >>> [EVENTO DE CAOS] Disparando Auto-Healing para provisionar n\u00f3 substituto: game-node-3 <<<",
+    "[2026-09-26T12:47:04.358Z] [AUTO-HEAL] >>> [EVENTO DE CAOS] Disparando Auto-Healing para provisionar n\u00f3 substituto: game-node-3 <<<",
+    "[2026-09-26T12:47:04.392Z] [AUTO-HEAL] [Etapa 1/5] Clonando e lan\u00e7ando container game-node-3 a partir da golden image 'forca-base'...",
+    "[2026-09-26T12:47:04.392Z] [AUTO-HEAL] [Etapa 1/5] Clonando e lan\u00e7ando container game-node-3 a partir da golden image 'forca-base'...",
+    "[2026-09-26T12:47:17.496Z] [AUTO-HEAL] [Etapa 1/5] Container lan\u00e7ado no Incus em 13104ms.",
+    "[2026-09-26T12:47:17.496Z] [AUTO-HEAL] [Etapa 1/5] Container lan\u00e7ado no Incus em 13104ms.",
+    "[2026-09-26T12:47:17.497Z] [AUTO-HEAL] [Etapa 2/5] Atribuindo IP est\u00e1tico 10.10.10.103 na interface eth0...",
+    "[2026-09-26T12:47:17.497Z] [AUTO-HEAL] [Etapa 2/5] Atribuindo IP est\u00e1tico 10.10.10.103 na interface eth0...",
+    "[2026-09-26T12:47:18.721Z] [AUTO-HEAL] [Etapa 2/5] IP 10.10.10.103 aplicado com sucesso via restart.",
+    "[2026-09-26T12:47:18.721Z] [AUTO-HEAL] [Etapa 2/5] IP 10.10.10.103 aplicado com sucesso via restart.",
+    "[2026-09-26T12:47:18.721Z] [AUTO-HEAL] [Etapa 3/5] Aguardando inicializa\u00e7\u00e3o do sistema operacional no container...",
+    "[2026-09-26T12:47:18.721Z] [AUTO-HEAL] [Etapa 3/5] Aguardando inicializa\u00e7\u00e3o do sistema operacional no container...",
+    "[2026-09-26T12:47:19.819Z] [AUTO-HEAL] [Etapa 3/5] Sistema operacional pronto (ready=true).",
+    "[2026-09-26T12:47:19.819Z] [AUTO-HEAL] [Etapa 3/5] Sistema operacional pronto (ready=true).",
+    "[2026-09-26T12:47:19.819Z] [AUTO-HEAL] [Etapa 4/5] Configurando vari\u00e1veis de ambiente das portas 4001 e 4002...",
+    "[2026-09-26T12:47:19.819Z] [AUTO-HEAL] [Etapa 4/5] Configurando vari\u00e1veis de ambiente das portas 4001 e 4002...",
+    "[2026-09-26T12:47:20.509Z] [AUTO-HEAL] [Etapa 4/5] Servi\u00e7os game-server@4001 e game-server@4002 habilitados e iniciados.",
+    "[2026-09-26T12:47:20.509Z] [AUTO-HEAL] [Etapa 4/5] Servi\u00e7os game-server@4001 e game-server@4002 habilitados e iniciados.",
+    "[2026-09-26T12:47:20.509Z] [AUTO-HEAL] [Etapa 5/5] Validando sa\u00fade e auto-registro das inst\u00e2ncias...",
+    "[2026-09-26T12:47:20.509Z] [AUTO-HEAL] [Etapa 5/5] Validando sa\u00fade e auto-registro das inst\u00e2ncias..."
+  ]
+}
