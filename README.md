@@ -1,178 +1,218 @@
-# Forca Distribuida
+# Jogo da Forca Distribuído & Resiliente
 
-**Alunos:** Lavínia Maria Moreira
+Sistema distribuído de alta disponibilidade e tolerância a falhas para partidas em tempo real do clássico **Jogo da Forca**, implementado em Node.js sobre containers de sistema **Incus LXC** e orquestração autônoma com **Auto-Healing**.
 
-Projeto em Node.js demonstrando uma arquitetura distribuida, resiliente e em tempo real do jogo da forca:
+[![Arquitetura](https://img.shields.io/badge/Architecture-Distributed_LXC_Cluster-blue.svg)](#arquitetura-do-sistema)
+[![Alta Disponibilidade](https://img.shields.io/badge/HA-Active--Passive_Failover-green.svg)](#alta-disponibilidade--tolerância-a-falhas)
+[![Observabilidade](https://img.shields.io/badge/SRE-Live_Gantt_Telemetry-purple.svg)](#observabilidade--painel-sre)
 
-- **Produção:** [https://forca.matheus-alves.dev](https://forca.matheus-alves.dev)
-- **Painel de Observabilidade / Monitor:** [https://forca.matheus-alves.dev/monitor.html](https://forca.matheus-alves.dev/monitor.html)
-- **Métricas:** [https://forca.matheus-alves.dev/metrics](https://forca.matheus-alves.dev/metrics)
-- **Healthcheck:** [https://forca.matheus-alves.dev/health](https://forca.matheus-alves.dev/health)
+---
 
-## Características da Atividade e Requisitos Atendidos
+## 👥 Alunos / Autores
 
-1. **Comunicação por Socket:**
-   - Comunicação full-duplex e orientada a eventos via Socket.IO entre Web-Client, Controller e Game-Servers.
-2. **Servidor Resiliente (Sistemas Distribuídos & Failover):**
-   - Arquitetura com Controller centralizador e múltiplos Game Servers independentes em containers separados.
-   - Heartbeat periódico a cada 15s. Se um nó cair ou for interrompido, o Controller detecta a partição de rede/falha e migra automaticamente a partida ativa para outro nó saudável, restaurando integralmente os dados (palavra, letras tentadas, vidas e turno).
-3. **Múltiplas Requisições & Sala de Espera (Lobby):**
-   - Gerenciamento de fila de espera com contagem pública e posição individual em tempo real.
-4. **Máximo de 2 Jogadores por Partida:**
-   - Pareamento automático estrito de 2 em 2 jogadores. Um terceiro jogador aguarda na sala de espera pela chegada do quarto.
-5. **Semáforo de Controle de Comunicações:**
-   - O servidor atua como um semáforo estrito (um jogador por vez).
-   - Bloqueio atômico contra condições de corrida e controle visual com semáforo de 3 estados (verde, amarelo, vermelho) para guiar o fluxo de turnos.
-6. **Duelo de Forcas e Status Compartilhado (Dois Bonecos Simultâneos):**
-   - Ambos os jogadores visualizam simultaneamente duas forcas completas e independentes: a sua própria e a do adversário.
-   - Quando um jogador erra uma letra, o respectivo boneco é desenhado na forca dele em tempo real e visualizado por ambos os competidores.
-7. **Infraestrutura VPS & Proxy Reverso Caddy:**
-   - Roteamento transparente via Caddyfile no domínio `forca.matheus-alves.dev`.
-   - Porta alternativa SSH da VPS descoberta e utilizada: **porta 443** (multiplexada via sslh).
+* **Matheus Alves** ([@Matheus-Allvz](https://github.com/Matheus-Allvz)) - Arquitetura Distribuída, Control Plane HA, Auto-Healing e SRE
+* **Marcos Vinicius Brandão** ([@MarcosViniciusBrandao](https://github.com/MarcosViniciusBrandao)) - Design System Front-End e UX/UI da Arena
+* **Lavínia Maria Moreira** - Colaboração e Documentação
 
-## Configuracao com .env
+---
 
-O projeto usa um arquivo `.env` na raiz. Um exemplo completo esta em `.env.example`.
+## 🌐 Endpoints de Produção
 
-Principais grupos de variaveis:
+* **Aplicação Principal (Lobby & Jogo):** [https://forca.matheus-alves.dev](https://forca.matheus-alves.dev)
+* **Painel de Operações & SRE (Gantt, Forensics & Caos):** [https://forca.matheus-alves.dev/ops.html](https://forca.matheus-alves.dev/ops.html)
+* **Monitor Simplificado:** [https://forca.matheus-alves.dev/monitor.html](https://forca.matheus-alves.dev/monitor.html)
+* **Métricas do Cluster (Prometheus/JSON):** [https://forca.matheus-alves.dev/metrics](https://forca.matheus-alves.dev/metrics)
+* **Health Check Ativo:** [https://forca.matheus-alves.dev/health](https://forca.matheus-alves.dev/health)
 
-- `CONTROLLER_PORT`, `PUBLIC_BASE_URL`, `CONTROLLER_INTERNAL_URL`
-- `GAME_SERVER_PORT`, `GAME_SERVER_ID`, `GAME_SERVER_PUBLIC_URL`, `GAME_SERVER_INTERNAL_URL`, `CONTROLLER_URL`
-- `GAME_SERVER_1_*` ate `GAME_SERVER_4_*` para o `docker compose`
+---
 
-Crie o arquivo de configuracao antes de iniciar (PowerShell):
+## 🏗️ Arquitetura do Sistema
 
-```powershell
-Copy-Item .env.example .env
+O sistema é dividido estritamente em **Plano de Controle (Control Plane)**, **Plano de Dados (Data Plane)** e **Borda de Rede (Edge Ingress)**:
+
+```
+                                  [ Internet / Usuários ]
+                                             │
+                                HTTPS :443   │ Caddy Ingress (Host)
+                         [ forward_auth @ vps-auth-gateway :8099 ]
+                                             ▼
+       ┌─────────────────────────────────────┴─────────────────────────────────────┐
+       │                                                                           │
+       ▼                                                                           ▼
+[ ctrl-primary ] (10.10.10.10)                                            [ ctrl-backup ] (10.10.10.20)
+Control Plane Ativo                                                       Standby Ativo Sincronizado
+(lb_policy first no Caddy)                                                (Eleição automática em caso de queda)
+       │                                                                           │
+       └─────────────────────────────────────┬─────────────────────────────────────┘
+                                             │
+                   Heartbeats Periódicos (15s) & Sincronização de Estado (Tokens)
+                                             │
+       ┌─────────────────────────────────────┼─────────────────────────────────────┐
+       ▼                                     ▼                                     ▼
+[ game-node-1 ] (10.10.10.101)         [ game-node-2 ] (10.10.10.102)         [ game-node-3 ] (10.10.10.103)
+Ports :4001, :4002                     Ports :4001, :4002                     Nó Elástico Dinâmico
+Data Plane Nominal                     Data Plane Nominal                     (Clonado via forca-base)
 ```
 
-O exemplo ja esta configurado para uso na propria maquina. As URLs publicas usam
-`http://localhost`, com o controller na porta 3000 e os servidores nas portas
-4001 a 4004. Nao e necessario configurar dominio, HTTPS ou proxy.
+### 1. Ingress & Roteamento de Borda (Caddy)
+* **Active Health Checking:** O proxy reverso Caddy monitora a porta `:8088` dos controladores a cada 1 segundo. Se o `ctrl-primary` falhar, comuta o tráfego de controle instantaneamente para o `ctrl-backup` (`lb_policy first`) sem retornar erro 502/503.
+* **Isolamento de Perímetro:** Rotas `/internal/*` são bloqueadas diretamente na borda (HTTP 403) para requisições externas.
+* **Proteção de Operações:** Rotas administrativas (`/ops*` e `/api/admin/*`) são protegidas via `forward_auth` pelo gateway de autenticação perimetral.
 
-`CONTROLLER_URL=http://localhost:3000` e usado ao executar diretamente com Node.js.
-No Docker, o Compose substitui essa variavel por `CONTROLLER_INTERNAL_URL`, que
-usa `http://controller:3000`. Mantenha os nomes dos servicos nas URLs internas
-`GAME_SERVER_1_INTERNAL_URL` ate `GAME_SERVER_4_INTERNAL_URL`: dentro de um
-container, `localhost` aponta para o proprio container.
+### 2. Plano de Controle (Control Plane HA)
+* **Controladores em Containers LXC:** `ctrl-primary` (10.10.10.10) e `ctrl-backup` (10.10.10.20).
+* **Fencing Tokens & Lease Locks:** Prevenção contra *split-brain*. Cada snapshot de partida e transição de estado valida o token da versão.
+* **Matchmaking Atômico:** Fila FIFO em memória com bloqueio serializado (*mutex*) para eliminar condições de corrida no pareamento simultâneo de jogadores.
 
-## Rodando localmente com Docker
+### 3. Plano de Dados (Data Plane)
+* **Containers de Processos:** Cada nó executa instâncias dedicadas do `game-server` através de systemd slices (`game-server@4001` e `game-server@4002`), isolando falhas de processo e memória.
+* **Comunicação por WebSockets:** Comunicação bidirecional e de baixa latência via Socket.IO para eventos do jogo em tempo real.
 
-```bash
-docker compose up --build
+### 4. Orquestrador Elástico de Auto-Healing (`enhanced-auto-heal-daemon.js`)
+* Daemon autônomo em execução no host que monitora a integridade de containers e portas HTTP:
+  * **Ressuscitação Inteligente:** Ressuscita containers caídos respeitando janelas de observação para evitar *flapping* de failover.
+  * **Spawn Elástico de Nós:** Se a capacidade do pool cair abaixo de 2 nós saudáveis, clona dinamicamente o `game-node-3` a partir da imagem template `forca-base`, injeta a versão de código mais recente e restabelece a capacidade em segundos.
+
+---
+
+## 🎮 Regras e Mecânicas de Jogo Distribuído
+
+1. **Sala de Espera (Lobby) e Pareamento Estrito:**
+   * Capacidade máxima de **2 jogadores por partida**.
+   * Quando o 3º jogador entra, aguarda na fila pela chegada do 4º jogador com contagem pública e posição atualizada em tempo real.
+2. **Semáforo de Turnos & Prevenção de Condições de Corrida:**
+   * Apenas o jogador da vez pode enviar lances.
+   * Interface com semáforo visual de 3 estados (verde = seu turno, amarelo = processando/atenção, vermelho = turno do oponente).
+3. **Duelo de Forcas Simultâneas (Dois Bonecos):**
+   * Ambos os competidores visualizam lado a lado duas forcas completas: a sua própria e a do oponente.
+   * Quando uma letra incorreta é tentada, a parte da forca é desenhada instantaneamente para ambos os jogadores.
+4. **Penalização por Tempo Limite:**
+   * Se o jogador não realizar uma jogada no tempo limite do turno (30s), o tempo esgotado **é contabilizado como erro na forca** (`+1 erro`), desenhando uma parte do corpo e passando a vez ao adversário.
+5. **Failover Transparente:**
+   * Se o servidor que hospeda a partida cair durante o jogo, o controlador detecta a interrupção, migra o snapshot para um servidor saudável e os clientes reconectam automaticamente via `reconnectToken`, sem perda de progresso (pontuação, vidas, letras e turno restaurados).
+
+---
+
+## 📊 Observabilidade & Painel SRE (`/ops.html`)
+
+O dashboard de operações disponibiliza telemetria avançada de sistemas distribuídos:
+* **Swimlane Gantt em Tempo Real:** Visualização temporal de nós e processos com janelas ajustáveis (3s ultra-rápida, 10s, 30s e 60s).
+* **Passo a Passo Forense:** Inspetor histórico de eventos para reproduzir incidentes de rede, quedas e recuperações.
+* **Métricas de Confiabilidade:** Cálculo contínuo de Uptime real e MTTR (*Mean Time To Recovery*).
+* **Injeção de Falhas Controladas (Chaos Testing):** Gatilhos para testar queda forçada de workers e failover do controlador primário.
+
+---
+
+## 🚀 Como Executar o Projeto
+
+### Opção 1: Localmente com Docker Compose
+
+Recomendado para desenvolvimento rápido e testes de lógica:
+
+1. Clone o repositório e crie o `.env`:
+   ```bash
+   git clone https://github.com/Matheus-Allvz/Forca.git
+   cd Forca
+   cp .env.example .env
+   ```
+
+2. Suba o cluster local (Controller + 4 Game Servers):
+   ```bash
+   docker compose up --build
+   ```
+
+3. Acesse no navegador:
+   * **Lobby:** `http://localhost:3000`
+   * **Jogo:** `http://localhost:3000/game.html`
+   * **Monitor:** `http://localhost:3000/monitor.html`
+
+---
+
+### Opção 2: Localmente sem Docker (Node.js)
+
+1. Instale as dependências:
+   ```bash
+   npm install
+   ```
+
+2. Em terminais separados, inicie o controller e os game servers:
+   ```bash
+   # Terminal 1 - Controller
+   npm run start:controller
+
+   # Terminal 2 - Game Server 1
+   PORT=4001 SERVER_ID=game-server-1 node game-server/server.js
+
+   # Terminal 3 - Game Server 2
+   PORT=4002 SERVER_ID=game-server-2 node game-server/server.js
+   ```
+
+---
+
+### Opção 3: Infraestrutura de Produção na VPS (Cluster Incus LXC)
+
+Toda a infraestrutura de produção está codificada e versionada na pasta [`infra/`](infra/):
+
+1. **Preparação do Host e Rede Incus:**
+   ```bash
+   sudo ./infra/incus/setup-phase1-host.sh
+   ```
+2. **Criação do Template Base (`forca-base`):**
+   ```bash
+   ./infra/incus/setup-phase2-template.sh
+   ./infra/incus/publish_template.sh
+   ```
+3. **Provisionamento do Cluster:**
+   ```bash
+   ./infra/cluster/apply_ops_cluster.sh
+   ```
+4. **Configuração de Borda Caddy & Autenticação:**
+   ```bash
+   sudo ./infra/caddy/update_caddyfile.sh
+   sudo python3 ./infra/security/apply_auth_rules.py
+   ```
+5. **Ativação do Auto-Healing:**
+   ```bash
+   sudo systemctl enable --now forca-auto-heal.service
+   ```
+
+---
+
+## 📁 Estrutura do Repositório
+
+```
+├── controller/               # Lógica do Controller / Orquestrador e Eleição
+│   ├── incus.js             # Integração com API Incus e gestão de containers
+│   ├── server.js            # API HTTP, Matchmaking, Reconciliação e Telemetria
+│   └── test_*.js            # Testes unitários e de estresse de métricas
+├── game-server/              # Lógica de negócio do Jogo da Forca
+│   ├── Dockerfile           # Imagem para execução em containers
+│   └── server.js            # Servidor Socket.IO, regras de turno e sincronização
+├── web-client/public/        # Interface de usuário (Front-end SPA)
+│   ├── index.html / lobby.js# Sala de espera e fila de matchmaking
+│   ├── game.html / game.js  # Arena de duelo com forcas duplas e semáforo
+│   ├── ops.html / ops.js    # Painel SRE com Gantt swimlane e forense
+│   └── monitor.html         # Monitor simplificado de nós
+├── infra/                    # Infraestrutura como Código (IaC) do Cluster
+│   ├── incus/               # Scripts de setup de rede e templates de containers
+│   ├── cluster/             # Provisionamento de controladores e workers
+│   ├── systemd/             # Units de serviço do controller, gameservers e auto-heal
+│   ├── caddy/               # Roteamento de borda, proxies e bloqueios
+│   └── security/            # Regras e scripts de isolamento de perímetro
+├── docs/                     # Documentação de Engenharia e Arquitetura
+│   ├── OPERATIONS_RUNBOOK.md# Manual de operações, rotinas de SRE e manutenção
+│   ├── ARCHITECTURE_SPEC.md # Especificação detalhada da arquitetura distribuída
+│   ├── CHAOS_TEST_REPORT.md # Relatório dos testes de caos e resiliência
+│   └── evidence/            # Logs e artefatos de evidência dos testes de carga
+├── enhanced-auto-heal-daemon.js # Daemon de Auto-Healing em produção
+├── deploy_observability.sh   # Script de sincronização atômica em produção
+└── docker-compose.yml        # Orquestração para ambiente local
 ```
 
-Acesso local na propria maquina:
+---
 
-- Lobby: `http://localhost:3000`
-- Tela de jogo: `http://localhost:3000/game.html`
-- Monitor do controller: `http://localhost:3000/monitor.html`
+## 📚 Documentação Adicional
 
-## Rodando sem Docker
-
-Instale as dependencias na raiz:
-
-```bash
-npm install
-```
-
-Com o `.env` da raiz configurado, em terminais separados:
-
-```bash
-npm run start:controller
-npm run start:server
-```
-
-Para subir um segundo servidor manualmente, sobrescreva as variaveis no terminal ou crie outro `.env` especifico antes de iniciar o processo.
-
-Exemplo no PowerShell:
-
-```powershell
-$env:PORT=4002
-$env:SERVER_ID="game-server-2"
-$env:PUBLIC_SERVER_URL="http://localhost:4002"
-$env:INTERNAL_SERVER_URL="http://localhost:4002"
-$env:CONTROLLER_URL="http://localhost:3000"
-node game-server/server.js
-```
-
-## Fluxo para demonstracao
-
-1. Abra dois navegadores ou abas anonimas e conecte dois jogadores.
-2. Abra um terceiro navegador para mostrar que ele fica em espera por um quarto jogador.
-3. Mostre o redirecionamento do lobby para `game.html` quando a partida comeca.
-4. Durante uma partida, derrube um dos containers `game-server` e mostre a migracao da partida para o outro servidor.
-5. Mostre o cliente reconectando automaticamente ao novo servidor.
-6. Acesse `/monitor.html` para exibir observabilidade basica.
-
-## Como acrescentar novos servidores
-
-Para adicionar um novo servidor de jogo, repita o mesmo padrao dos servicos existentes.
-
-### 1. Acrescente variaveis no `.env`
-
-O Compose ja inclui quatro servidores. Exemplo para um quinto servidor:
-
-```env
-GAME_SERVER_5_PORT=4005
-GAME_SERVER_5_ID=game-server-5
-GAME_SERVER_5_PUBLIC_URL=http://localhost:4005
-GAME_SERVER_5_INTERNAL_URL=http://game-server-5:4005
-```
-
-### 2. Acrescente o servico no `docker-compose.yml`
-
-```yml
-  game-server-5:
-    container_name: game-server-5
-    build:
-      context: .
-      dockerfile: game-server/Dockerfile
-    environment:
-      PORT: ${GAME_SERVER_5_PORT}
-      SERVER_ID: ${GAME_SERVER_5_ID}
-      CONTROLLER_URL: ${CONTROLLER_INTERNAL_URL}
-      PUBLIC_SERVER_URL: ${GAME_SERVER_5_PUBLIC_URL}
-      INTERNAL_SERVER_URL: ${GAME_SERVER_5_INTERNAL_URL}
-    ports:
-      - "${GAME_SERVER_5_PORT}:${GAME_SERVER_5_PORT}"
-```
-
-Tambem inclua o novo servico em `depends_on` do controller:
-
-```yml
-    depends_on:
-      - game-server-1
-      - game-server-2
-      - game-server-3
-      - game-server-4
-      - game-server-5
-```
-
-### 3. Configure a URL publica
-
-Para uso local, use `http://localhost:4005`. Para acesso externo, configure um
-endereco acessivel pelo navegador e publique a porta ou use um proxy.
-
-### 4. Recrie os containers
-
-```bash
-docker compose up -d --build
-```
-
-### Regras para novos servidores
-
-Cada novo servidor precisa ter:
-
-- uma porta unica
-- um `SERVER_ID` unico
-- uma URL publica acessivel pelo navegador
-- uma `INTERNAL_SERVER_URL` que aponte para o nome do servico Docker
-
-Sem isso, o controller nao consegue distribuir e migrar partidas corretamente.
-
-## Observacoes
-
-- O controller mantem estado em memoria e snapshots das partidas, o que simplifica a demonstracao do failover.
-- Para alta disponibilidade real do controller, o proximo passo natural seria usar Redis/PostgreSQL para estado compartilhado e eleicao de lider.
-- O jogo esta modelado em turnos alternados; erro conta para o jogador que tentou a letra.
+* 📖 [Runbook de Operações & SRE](docs/OPERATIONS_RUNBOOK.md)
+* 📐 [Especificação Arquitetural Completa](docs/ARCHITECTURE_SPEC.md)
+* 🧪 [Relatório de Testes de Caos & Evidências](docs/CHAOS_TEST_REPORT.md)

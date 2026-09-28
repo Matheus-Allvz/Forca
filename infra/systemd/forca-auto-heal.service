@@ -1,0 +1,16 @@
+[Unit]
+Description=Forca Distribuida Elastic Auto-Healing Daemon
+After=network.target incus.service
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/forca
+ExecStart=/usr/bin/node /opt/forca/auto-heal-daemon.js
+Restart=always
+RestartSec=3s
+StandardOutput=append:/var/log/forca-auto-heal.log
+StandardError=append:/var/log/forca-auto-heal.log
+
+[Install]
+WantedBy=multi-user.target

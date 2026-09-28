@@ -1,0 +1,13 @@
+{
+  "test": "Teste 1: Crash de Processo",
+  "target_node": "game-node-1",
+  "service": "game-server@4001.service",
+  "timestamp_crash": "2026-09-26T12:46:37.557Z",
+  "timestamp_recovered": "2026-09-26T12:46:38.949Z",
+  "pid_before": "196",
+  "pid_after": "247",
+  "mttr_ms": 1374,
+  "success": true,
+  "journal_logs": "Sep 26 12:23:41 game-node-1 node[196]: node1-game-server-4001 registrado no controller http://10.10.10.10:8088\nSep 26 12:46:37 game-node-1 systemd[1]: game-server@4001.service: Main process exited, code=killed, status=9/KILL\nSep 26 12:46:37 game-node-1 systemd[1]: game-server@4001.service: Failed with result 'signal'.\nSep 26 12:46:37 game-node-1 systemd[1]: game-server@4001.service: Consumed 2.107s CPU time, 97.9M memory peak, 0B memory swap peak.\nSep 26 12:46:38 game-node-1 systemd[1]: game-server@4001.service: Scheduled restart job, restart counter is at 1.\nSep 26 12:46:38 game-node-1 systemd[1]: Started game-server@4001.service - Forca Game Server on port 4001.\nSep 26 12:46:38 game-node-1 node[247]: node1-game-server-4001 listening on https://forca.matheus-alves.dev/servers/node1-p1\nSep 26 12:46:38 game-node-1 node[247]: node1-game-server-4001 registrado no controller http://10.10.10.10:8088",
+  "health_payload": "{\"status\":\"ok\",\"service\":\"node1-game-server-4001\",\"activeGames\":0,\"timestamp\":\"2026-09-26T12:46:38.945Z\"}"
+}
