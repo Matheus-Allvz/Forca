@@ -7,8 +7,7 @@ const seloContadorTurno = document.querySelector("#turn-countdown-badge");
 const barraProgressoTurno = document.querySelector("#turn-timer-bar");
 const palavraMascarada = document.querySelector("#masked-word");
 const temaPartida = document.querySelector("#theme");
-const textoDica = document.querySelector("#hint");
-const botaoDica = document.querySelector("#hint-toggle");
+const badgeDificuldade = document.querySelector("#difficulty-badge");
 const letrasErradas = document.querySelector("#wrong-letters");
 const containerJogadores = document.querySelector("#players");
 const formularioPalpite = document.querySelector("#guess-form");
@@ -39,10 +38,27 @@ const lightYellow = document.querySelector("#light-yellow");
 const lightGreen = document.querySelector("#light-green");
 const semaforoSublabel = document.querySelector("#semaphore-sublabel");
 
+// Elementos do HUD de Combate (Estatísticas em Tempo Real)
+const statAccuracy = document.querySelector("#stat-accuracy");
+const statAvgTime = document.querySelector("#stat-avg-time");
+const statStreak = document.querySelector("#stat-streak");
+const statStreakIcon = document.querySelector("#stat-streak-icon");
+const statDuration = document.querySelector("#stat-duration");
+
+// Elementos do Sistema de Dica por Consenso 2/2
+const cardDicaConsenso = document.querySelector("#hint-consensus-card");
+const badgeStatusDica = document.querySelector("#hint-status-badge");
+const botaoDica = document.querySelector("#hint-toggle");
+const textoBtnDica = document.querySelector("#hint-btn-text");
+const descDica = document.querySelector("#hint-consensus-desc");
+const caixaDicaRevelada = document.querySelector("#hint-revealed-box");
+const textoDica = document.querySelector("#hint");
+
 const containerTeclado = document.querySelector("#virtual-keyboard");
 const dicaTeclado = document.querySelector("#keyboard-hint-text");
 const botaoTema = document.querySelector("#theme-toggle");
 const botaoSom = document.querySelector("#sound-toggle");
+const overlayVinheta = document.querySelector("#vignette-overlay");
 
 // Modal de Fim de Jogo
 const modalFimJogo = document.querySelector("#game-over-modal");
@@ -59,7 +75,7 @@ const chaveNomePreferido = "forca-distribuida-preferred-name";
 const chaveTema = "forca-distribuida-theme";
 const chaveSom = "forca-distribuida-sound";
 
-// Sistema de Efeitos Sonoros com Web Audio API
+// Sistema de Efeitos Sonoros Sintetizados Proceduralmente (Web Audio API nativa)
 class SoundFx {
   constructor() {
     this.ctx = null;
@@ -71,6 +87,9 @@ class SoundFx {
     if (!this.ctx && typeof AudioContext !== "undefined") {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume().catch(() => {});
+    }
   }
 
   toggle() {
@@ -78,7 +97,7 @@ class SoundFx {
     localStorage.setItem(chaveSom, String(this.muted));
     this.atualizarBotaoSom();
     if (!this.muted) {
-      this.playTone(523.25, "sine", 0.1);
+      this.votoDica();
     }
     return this.muted;
   }
@@ -95,7 +114,6 @@ class SoundFx {
     try {
       this.init();
       if (!this.ctx) return;
-      if (this.ctx.state === "suspended") this.ctx.resume();
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = tipo;
@@ -112,31 +130,84 @@ class SoundFx {
   }
 
   tecla() {
-    this.playTone(480, "sine", 0.06, 0.04);
+    this.playTone(480, "sine", 0.05, 0.04);
   }
 
   acerto() {
-    this.playTone(523.25, "sine", 0.12, 0.1);
-    setTimeout(() => this.playTone(659.25, "sine", 0.15, 0.1), 90);
-    setTimeout(() => this.playTone(783.99, "sine", 0.25, 0.12), 180);
+    if (this.muted) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      // Chime alegre ascendente em arpeggio cintilante
+      const notas = [523.25, 659.25, 783.99, 1046.5];
+      notas.forEach((freq, idx) => {
+        setTimeout(() => this.playTone(freq, "sine", 0.2, 0.09), idx * 75);
+      });
+    } catch {}
   }
 
   erro() {
-    this.playTone(180, "sawtooth", 0.25, 0.12);
+    if (this.muted) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      // Buzz arcade com decaimento dinâmico de frequência
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(55, this.ctx.currentTime + 0.26);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.26);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.26);
+    } catch {}
+  }
+
+  votoDica() {
+    if (this.muted) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      // Ding suave cristalino para dica
+      this.playTone(880, "sine", 0.35, 0.09);
+      setTimeout(() => this.playTone(1320, "triangle", 0.38, 0.06), 40);
+    } catch {}
   }
 
   vitoria() {
-    const notas = [523.25, 659.25, 783.99, 1046.5];
-    notas.forEach((freq, idx) => {
-      setTimeout(() => this.playTone(freq, "triangle", 0.35, 0.14), idx * 120);
-    });
+    if (this.muted) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      // Fanfarra arcade vitoriosa
+      const melodia = [
+        { f: 523.25, d: 0.12, t: 0 },
+        { f: 659.25, d: 0.12, t: 110 },
+        { f: 783.99, d: 0.14, t: 220 },
+        { f: 1046.5, d: 0.38, t: 340 },
+        { f: 880, d: 0.14, t: 500 },
+        { f: 1046.5, d: 0.55, t: 650 }
+      ];
+      melodia.forEach(({ f, d, t }) => {
+        setTimeout(() => this.playTone(f, "triangle", d, 0.14), t);
+      });
+    } catch {}
   }
 
   derrota() {
-    const notas = [440, 392, 349.23, 293.66];
-    notas.forEach((freq, idx) => {
-      setTimeout(() => this.playTone(freq, "sawtooth", 0.3, 0.12), idx * 140);
-    });
+    if (this.muted) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      // Som clássico de derrota com notas descendentes
+      const notas = [440, 392, 349.23, 277.18, 220];
+      notas.forEach((freq, idx) => {
+        setTimeout(() => this.playTone(freq, "sawtooth", 0.3, 0.1), idx * 125);
+      });
+    } catch {}
   }
 }
 
@@ -236,7 +307,19 @@ let temporizadorTurno = null;
 let prazoTurnoLocal = null;
 let limiteTempoTurnoMs = 20000;
 let ultimosErrosVisualizador = 0;
+let ultimosErrosAdversario = 0;
 let ultimasLetrasAcertadas = 0;
+let hintJaRevelada = false;
+
+// Estado das Estatísticas do HUD de Combate
+let viewerTotalGuesses = 0;
+let viewerHitsCount = 0;
+let viewerStreak = 0;
+let viewerTurnStart = null;
+let viewerTurnDurations = [];
+let matchStartTimestamp = null;
+let matchTimerInterval = null;
+let pendingViewerLetter = null;
 
 function carregarJson(chave) {
   try {
@@ -259,12 +342,82 @@ function adicionarLog(mensagem) {
   listaEventos.prepend(item);
 }
 
+// HUD de Combate: Atualização de Estatísticas em Tempo Real
+function atualizarHudCombate() {
+  // 1. Precisão de Acertos (%)
+  const accuracy = viewerTotalGuesses > 0 ? Math.round((viewerHitsCount / viewerTotalGuesses) * 100) : 100;
+  if (statAccuracy) {
+    statAccuracy.textContent = `${accuracy}%`;
+  }
+
+  // 2. Tempo Médio por Lance
+  const avgTime = viewerTurnDurations.length > 0
+    ? (viewerTurnDurations.reduce((acc, curr) => acc + curr, 0) / viewerTurnDurations.length).toFixed(1)
+    : "0.0";
+  if (statAvgTime) {
+    statAvgTime.textContent = `${avgTime}s`;
+  }
+
+  // 3. Sequência de Acertos (Streak)
+  if (statStreak) {
+    statStreak.textContent = `${viewerStreak}x`;
+    if (statStreakIcon) {
+      statStreakIcon.classList.toggle("streak-fire", viewerStreak >= 2);
+    }
+  }
+}
+
+function iniciarCronometroPartida(createdAt) {
+  if (matchTimerInterval) return;
+  matchStartTimestamp = createdAt || Date.now();
+
+  function atualizarTempo() {
+    if (!statDuration) return;
+    const decorridoSeg = Math.max(0, Math.floor((Date.now() - matchStartTimestamp) / 1000));
+    const minutos = String(Math.floor(decorridoSeg / 60)).padStart(2, "0");
+    const segundos = String(decorridoSeg % 60).padStart(2, "0");
+    statDuration.textContent = `${minutos}:${segundos}`;
+  }
+
+  atualizarTempo();
+  matchTimerInterval = setInterval(atualizarTempo, 1000);
+}
+
+function pararCronometroPartida() {
+  if (matchTimerInterval) {
+    clearInterval(matchTimerInterval);
+    matchTimerInterval = null;
+  }
+}
+
+// Efeito de Tremor na Tela (Screen Shake) ao errar
+function sacudirTela() {
+  document.body.classList.remove("screen-shake");
+  void document.body.offsetWidth; // Forçar reflow
+  document.body.classList.add("screen-shake");
+
+  if (overlayVinheta) {
+    overlayVinheta.classList.remove("flash-red");
+    void overlayVinheta.offsetWidth;
+    overlayVinheta.classList.add("flash-red");
+    setTimeout(() => overlayVinheta.classList.remove("flash-red"), 350);
+  }
+
+  setTimeout(() => document.body.classList.remove("screen-shake"), 450);
+}
+
 // Renderização das Forcas de Duelo (Um boneco independente para cada jogador)
 function renderizarForca(partes, alvo = "me") {
   const container = alvo === "opponent" ? estagioForcaOpponent : (estagioForcaMe || estagioForca);
   if (container) {
     container.querySelectorAll(".part").forEach((elemento) => {
-      elemento.classList.toggle("visible", partes.includes(elemento.dataset.part));
+      const estavaVisivel = elemento.classList.contains("visible");
+      const agoraVisivel = partes.includes(elemento.dataset.part);
+      if (!estavaVisivel && agoraVisivel) {
+        elemento.classList.add("visible", "dramatic-entry");
+      } else if (!agoraVisivel) {
+        elemento.classList.remove("visible", "dramatic-entry");
+      }
     });
   } else {
     document.querySelectorAll(".part").forEach((elemento) => {
@@ -277,7 +430,7 @@ function sacudirForca(alvo = "me") {
   const container = alvo === "opponent" ? estagioForcaOpponent : (estagioForcaMe || estagioForca);
   if (!container) return;
   container.classList.remove("shake");
-  void container.offsetWidth; // trigger reflow
+  void container.offsetWidth;
   container.classList.add("shake");
   setTimeout(() => container.classList.remove("shake"), 500);
 }
@@ -435,6 +588,7 @@ function encerrarFluxoDaPartida({ jogarNovamente = false } = {}) {
 
 // Renderização dos Jogadores (Duelo 1v1)
 function renderizarJogadores(estado) {
+  if (!containerJogadores) return;
   containerJogadores.innerHTML = "";
   const maxErros = estado.maxErrors || 6;
 
@@ -501,7 +655,7 @@ function renderizarPalavra(maskedWord) {
   if (!palavraMascarada) return;
   palavraMascarada.innerHTML = "";
 
-  const caracteres = maskedWord.split(" ");
+  const caracteres = (maskedWord || "").split(" ");
   caracteres.forEach((char) => {
     const tile = document.createElement("span");
     const isRevealed = char !== "_";
@@ -523,6 +677,113 @@ function renderizarLetrasErradas(letras) {
   letrasErradas.innerHTML = letras.map((letra) => `
     <span class="wrong-chip" title="Letra incorreta">${letra.toUpperCase()}</span>
   `).join("");
+}
+
+// Renderização do Tema e Dificuldade
+function renderizarTemaEDificuldade(estado) {
+  if (temaPartida) {
+    const temaNome = (estado.topic || "Geral").toUpperCase();
+    temaPartida.innerHTML = `🏷️ TEMA: <strong>${temaNome}</strong>`;
+  }
+
+  if (badgeDificuldade) {
+    const diff = estado.difficulty || "Médio";
+    const diffLower = diff.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    badgeDificuldade.className = `arena-tag-badge difficulty-badge diff-${diffLower}`;
+    badgeDificuldade.innerHTML = `⚡ DIFICULDADE: <strong>${diff}</strong>`;
+  }
+}
+
+// Renderização do Sistema de Dica por Consenso 2/2
+function renderizarDicaConsenso(estado) {
+  if (!botaoDica) return;
+
+  const hintLiberada = Boolean(estado.hintRequested);
+  const hintVotes = Array.isArray(estado.hintVotes) ? estado.hintVotes : [];
+  const hintCount = Number(estado.hintVotesCount || hintVotes.length);
+  const myPlayerId = sessao?.playerId || estado.viewerPlayerId;
+  const myVote = Boolean(estado.myHintVote || hintVotes.includes(myPlayerId));
+  const opponentVote = Boolean(hintVotes.some((id) => id !== myPlayerId) || (hintCount === 1 && !myVote));
+
+  if (hintLiberada) {
+    if (!hintJaRevelada) {
+      hintJaRevelada = true;
+      som.votoDica();
+      if (caixaDicaRevelada) {
+        caixaDicaRevelada.classList.remove("hidden");
+        caixaDicaRevelada.classList.add("revealing-gold");
+      }
+    } else {
+      if (caixaDicaRevelada) {
+        caixaDicaRevelada.classList.remove("hidden");
+      }
+    }
+
+    if (badgeStatusDica) {
+      badgeStatusDica.textContent = "2/2 Consenso Atingido";
+      badgeStatusDica.className = "hint-consensus-badge consensus-reached";
+    }
+
+    if (textoBtnDica) {
+      textoBtnDica.textContent = "💡 Dica Revelada (2/2)";
+    }
+    botaoDica.disabled = true;
+    botaoDica.style.display = "none";
+
+    if (textoDica) {
+      textoDica.hidden = false;
+      textoDica.innerHTML = `<span>Dica: <strong>${estado.hint || "Palavra especial"}</strong></span>`;
+    }
+
+    if (descDica) {
+      descDica.textContent = "Consenso atingido (2/2)! Dica secreta liberada para ambos os jogadores.";
+    }
+  } else {
+    hintJaRevelada = false;
+    if (caixaDicaRevelada) {
+      caixaDicaRevelada.classList.add("hidden");
+      caixaDicaRevelada.classList.remove("revealing-gold");
+    }
+    if (textoDica) {
+      textoDica.hidden = true;
+    }
+    botaoDica.style.display = "inline-flex";
+
+    if (hintCount === 0) {
+      if (badgeStatusDica) {
+        badgeStatusDica.textContent = "0/2 Votos";
+        badgeStatusDica.className = "hint-consensus-badge";
+      }
+      botaoDica.className = "hint-consensus-btn";
+      if (textoBtnDica) textoBtnDica.textContent = "Pedir Dica (0/2)";
+      botaoDica.disabled = estado.status !== "playing";
+      if (descDica) {
+        descDica.textContent = "Ambos os jogadores devem pedir a dica para que ela seja revelada sem penalidades.";
+      }
+    } else if (myVote && !opponentVote) {
+      if (badgeStatusDica) {
+        badgeStatusDica.textContent = "1/2 Votos";
+        badgeStatusDica.className = "hint-consensus-badge waiting-vote";
+      }
+      botaoDica.className = "hint-consensus-btn waiting-pulse";
+      if (textoBtnDica) textoBtnDica.textContent = "Você votou! Aguardando oponente (1/2)";
+      botaoDica.disabled = true;
+      if (descDica) {
+        descDica.textContent = "Seu voto foi registrado! Aguardando o adversário aceitar a dica.";
+      }
+    } else if (opponentVote && !myVote) {
+      if (badgeStatusDica) {
+        badgeStatusDica.textContent = "1/2 Votos";
+        badgeStatusDica.className = "hint-consensus-badge pending-action";
+      }
+      botaoDica.className = "hint-consensus-btn accept-glow";
+      if (textoBtnDica) textoBtnDica.textContent = "Oponente pediu a dica! Clique para aceitar (1/2)";
+      botaoDica.disabled = estado.status !== "playing";
+      if (descDica) {
+        descDica.textContent = "Seu adversário quer ver a dica! Clique no botão para conceder consenso mútuo.";
+      }
+    }
+  }
 }
 
 // Criação e Atualização do Teclado Virtual A-Z
@@ -572,7 +833,7 @@ function atualizarTecladoVirtual(estado, podeJogar) {
 
   if (dicaTeclado) {
     dicaTeclado.textContent = podeJogar
-      ? "🎯 Sua vez! Clique ou digite uma letra."
+      ? "🎯 Sua vez! Clique ou digite uma letra no teclado."
       : "⏳ Aguarde a vez do adversário.";
   }
 }
@@ -589,10 +850,20 @@ function enviarPalpiteLetra(letra) {
 
   som.tecla();
 
-  // Efeito visual no botão da tecla
+  // Registrar tempo de resposta do lance
+  if (viewerTurnStart) {
+    const duration = Math.max(0.1, (Date.now() - viewerTurnStart) / 1000);
+    viewerTurnDurations.push(duration);
+    viewerTurnStart = null;
+  }
+
+  // Guardar letra pendente para avaliar acerto/erro nas estatísticas do HUD
+  pendingViewerLetter = l;
+
+  // Efeito visual tátil no botão da tecla
   const btnKey = document.querySelector(`.key-btn[data-key="${l}"]`);
   if (btnKey) {
-    btnKey.style.transform = "scale(0.9)";
+    btnKey.style.transform = "scale(0.88)";
     setTimeout(() => {
       btnKey.style.transform = "";
     }, 150);
@@ -607,7 +878,6 @@ function enviarPalpiteLetra(letra) {
 
 // Captura de Teclas Físicas do Teclado
 window.addEventListener("keydown", (evento) => {
-  // Ignora se estiver digitando em outro input que não o campo de palpite
   if (evento.target !== campoPalpite && (evento.target.tagName === "INPUT" || evento.target.tagName === "TEXTAREA")) {
     return;
   }
@@ -623,17 +893,19 @@ window.addEventListener("keydown", (evento) => {
 function exibirModalFimJogo(venceu, motivo, palavraSecreta) {
   if (!modalFimJogo) return;
 
+  pararCronometroPartida();
+
   if (venceu) {
     som.vitoria();
     dispararConfetes();
     iconeModal.textContent = "🏆";
     tituloModal.textContent = "Vitória Espetacular!";
-    subtituloModal.textContent = `Parabéns! Você venceu a partida. Motivo: ${motivo || "Você decifrou a palavra!"}.`;
+    subtituloModal.textContent = `Parabéns! Você decifrou a palavra e venceu o duelo! Motivo: ${motivo || "Palavra completada"}.`;
   } else {
     som.derrota();
     iconeModal.textContent = "💀";
     tituloModal.textContent = "Você Foi Enforcado!";
-    subtituloModal.textContent = `Fim de jogo! Seu adversário venceu a disputa. Motivo: ${motivo || "Limite de erros atingido"}.`;
+    subtituloModal.textContent = `Fim de jogo! Seu adversário levou a melhor no duelo. Motivo: ${motivo || "Limite de erros atingido"}.`;
   }
 
   if (palavraModal && palavraSecreta) {
@@ -645,35 +917,66 @@ function exibirModalFimJogo(venceu, motivo, palavraSecreta) {
 
 function renderizarEstadoPartida(estado) {
   const visualizador = estado.players.find((jogador) => jogador.playerId === estado.viewerPlayerId);
+  const adversario = estado.players.find((jogador) => jogador.playerId !== estado.viewerPlayerId);
   const podeJogar = estado.status === "playing" && visualizador && visualizador.isTurn && visualizador.connected;
 
-  // Detecção de novo erro ou acerto para tocar som e sacudir forca
-  const novosErros = visualizador ? visualizador.errors : 0;
-  if (novosErros > ultimosErrosVisualizador) {
-    sacudirForca();
+  // Iniciar cronômetro da partida
+  if (estado.status === "playing") {
+    iniciarCronometroPartida(estado.createdAt);
+    if (podeJogar && !viewerTurnStart) {
+      viewerTurnStart = Date.now();
+    }
+  }
+
+  // Avaliação de jogada pendente do visualizador para estatísticas do HUD
+  if (pendingViewerLetter) {
+    const letra = pendingViewerLetter;
+    viewerTotalGuesses += 1;
+    const estavaCerta = estado.attemptedLetters.includes(letra) && !estado.wrongLetters.includes(letra);
+
+    if (estavaCerta) {
+      viewerHitsCount += 1;
+      viewerStreak += 1;
+    } else {
+      viewerStreak = 0;
+    }
+    pendingViewerLetter = null;
+    atualizarHudCombate();
+  }
+
+  // Detecção de novo erro ou acerto do visualizador
+  const novosErrosMe = visualizador ? visualizador.errors : 0;
+  const novosErrosOpp = adversario ? adversario.errors : 0;
+
+  if (novosErrosMe > ultimosErrosVisualizador) {
+    sacudirTela();
+    sacudirForca("me");
     som.erro();
+  } else if (novosErrosOpp > ultimosErrosAdversario) {
+    sacudirForca("opponent");
   } else if (estado.maskedWord && estado.maskedWord.replace(/[^A-Za-z]/g, "").length > ultimasLetrasAcertadas) {
     som.acerto();
   }
-  ultimosErrosVisualizador = novosErros;
+
+  ultimosErrosVisualizador = novosErrosMe;
+  ultimosErrosAdversario = novosErrosOpp;
   ultimasLetrasAcertadas = (estado.maskedWord || "").replace(/[^A-Za-z]/g, "").length;
 
   estadoAtual = estado;
   seloServidor.textContent = `🟢 ${estado.serverId}`;
-  tituloPartida.textContent = "Duelo em Andamento";
-  subtituloPartida.textContent = estado.status === "finished" ? "Partida encerrada" : `Vez de ${estado.currentTurnPlayerName || "aguardar"}`;
-  
+  tituloPartida.textContent = "Arena de Duelo 1v1";
+  subtituloPartida.textContent = estado.status === "finished"
+    ? "Partida encerrada"
+    : `Vez de ${estado.currentTurnPlayerName || "aguardar"}`;
+
+  renderizarTemaEDificuldade(estado);
   renderizarPalavra(estado.maskedWord);
-  temaPartida.innerHTML = `🏷️ Tema: <strong>${estado.topic || "Geral"}</strong>`;
-  textoDica.textContent = `💡 Dica: ${estado.hint || "indisponível"}`;
-  textoDica.hidden = !estado.hintRequested;
-  botaoDica.textContent = estado.hintRequested ? "💡 Dica exibida para todos" : "💡 Pedir dica";
-  botaoDica.disabled = estado.hintRequested || !podeJogar;
-  
+  renderizarDicaConsenso(estado);
   renderizarLetrasErradas(estado.wrongLetters);
   renderizarForcasDuelo(estado);
   renderizarJogadores(estado);
   atualizarTecladoVirtual(estado, podeJogar);
+  atualizarHudCombate();
 
   if (legendaForcaMe && visualizador) {
     legendaForcaMe.textContent = `Seus erros: ${visualizador.errors}/${estado.maxErrors}`;
@@ -690,6 +993,7 @@ function renderizarEstadoPartida(estado) {
 
   if (estado.status === "finished") {
     pararTemporizadorTurno();
+    pararCronometroPartida();
     const venceu = estado.winnerPlayerId === estado.viewerPlayerId;
     atualizarFaixaTurno("finished", venceu ? "🏆 Partida encerrada. Você venceu!" : "💀 Partida encerrada. Você perdeu.");
     exibirModalFimJogo(venceu, "Duelo finalizado", estado.maskedWord);
@@ -702,12 +1006,13 @@ function renderizarEstadoPartida(estado) {
   iniciarTemporizadorTurno(estado);
 }
 
-botaoDica.addEventListener("click", () => {
+// Botão de Dica (Consenso Mútuo 2/2)
+botaoDica?.addEventListener("click", () => {
   if (!socketPartida || !estadoAtual || estadoAtual.hintRequested) {
     return;
   }
 
-  som.playTone(600, "triangle", 0.2);
+  som.votoDica();
   socketPartida.emit("request-hint", {
     gameId: estadoAtual.gameId,
     playerId: sessao.playerId
@@ -782,7 +1087,7 @@ async function consultarFailover() {
       conectarNaPartida();
     }
   } catch {
-    atualizarFaixaTurno("waiting", "🛡️ Aguardando migração automática da partida para outro servidor...");
+    atualizarFaixaTurno("waiting", "🛡️ Aguardando migração automática da partida para outro nó do cluster...");
   }
 }
 
@@ -792,6 +1097,7 @@ function iniciarRecuperacao() {
   }
 
   pararTemporizadorTurno();
+  pararCronometroPartida();
   campoPalpite.disabled = true;
   formularioPalpite.querySelector("button").disabled = true;
   atualizarFaixaTurno("waiting", "⚠️ Servidor indisponível. Aguardando migração automática (failover)...");
@@ -834,7 +1140,7 @@ function conectarNaPartida() {
 
   desconexaoEsperada = false;
   socketPartida = criarSocketPartida(dadosPartida.serverUrl);
-  adicionarLog(`Conectando ao servidor ${dadosPartida.serverUrl}...`);
+  adicionarLog(`Conectando ao nó de jogo ${dadosPartida.serverUrl}...`);
 
   socketPartida.on("connect", () => {
     pararRecuperacao();
@@ -851,7 +1157,7 @@ function conectarNaPartida() {
       return;
     }
 
-    adicionarLog("Conexão com o servidor da partida foi perdida.");
+    adicionarLog("Conexão com o servidor da partida foi interrompida.");
     iniciarRecuperacao();
   });
 
@@ -864,8 +1170,9 @@ function conectarNaPartida() {
     renderizarEstadoPartida(estado);
   });
 
-  socketPartida.on("player-hangman-update", ({ playerId, errors, hangmanPartsDrawn }) => {
+  socketPartida.on("player-hangman-update", ({ playerId, hangmanPartsDrawn }) => {
     if (playerId === sessao?.playerId) {
+      sacudirTela();
       sacudirForca("me");
       renderizarForca(hangmanPartsDrawn, "me");
     } else {
