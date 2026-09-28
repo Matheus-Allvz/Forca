@@ -1,0 +1,16 @@
+[Unit]
+Description=Forca Game Server on port %i
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/forca
+EnvironmentFile=-/etc/default/game-server-%i
+ExecStart=/usr/bin/node game-server/server.js
+Restart=always
+RestartSec=1s
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
