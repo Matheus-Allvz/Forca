@@ -13,6 +13,7 @@ Sistema distribuído de alta disponibilidade e tolerância a falhas para partida
 * **Matheus Alves** ([@Matheus-Allvz](https://github.com/Matheus-Allvz)) - Arquitetura Distribuída, Control Plane HA, Auto-Healing e SRE
 * **Marcos Vinicius Oliveira Brandão** ([@MarcosViniciusBrandao](https://github.com/MarcosViniciusBrandao)) - Design System Front-End e UX/UI da Arena
 * **Lavínia Maria Moreira** - Colaboração e Documentação
+* **Nicole Gomes da C. Yssob** - Colaboração e Documentação
 
 ---
 
