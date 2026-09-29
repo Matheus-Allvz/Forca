@@ -656,6 +656,22 @@ function renderizarPalavra(maskedWord) {
   palavraMascarada.innerHTML = "";
 
   const caracteres = (maskedWord || "").split(" ");
+  const totalLetras = caracteres.length;
+
+  if (totalLetras > 14) {
+    palavraMascarada.className = "word-tiles word-tiles-ultra";
+  } else if (totalLetras > 9) {
+    palavraMascarada.className = "word-tiles word-tiles-compact";
+  } else {
+    palavraMascarada.className = "word-tiles";
+  }
+
+  const contadorLetras = document.querySelector("#word-length-counter");
+  if (contadorLetras) {
+    const descobertas = caracteres.filter((c) => c !== "_").length;
+    contadorLetras.textContent = `${totalLetras} letras (${descobertas}/${totalLetras} reveladas)`;
+  }
+
   caracteres.forEach((char) => {
     const tile = document.createElement("span");
     const isRevealed = char !== "_";
@@ -696,7 +712,7 @@ function renderizarTemaEDificuldade(estado) {
 
 // Renderização do Sistema de Dica por Consenso 2/2
 function renderizarDicaConsenso(estado) {
-  if (!botaoDica) return;
+  if (!cardDicaConsenso && !botaoDica) return;
 
   const hintLiberada = Boolean(estado.hintRequested);
   const hintVotes = Array.isArray(estado.hintVotes) ? estado.hintVotes : [];
@@ -704,59 +720,64 @@ function renderizarDicaConsenso(estado) {
   const myPlayerId = sessao?.playerId || estado.viewerPlayerId;
   const myVote = Boolean(estado.myHintVote || hintVotes.includes(myPlayerId));
   const opponentVote = Boolean(hintVotes.some((id) => id !== myPlayerId) || (hintCount === 1 && !myVote));
+  const hintText = estado.hint || "Palavra especial";
 
   if (hintLiberada) {
     if (!hintJaRevelada) {
       hintJaRevelada = true;
       som.votoDica();
-      if (caixaDicaRevelada) {
-        caixaDicaRevelada.classList.remove("hidden");
-        caixaDicaRevelada.classList.add("revealing-gold");
-      }
-    } else {
-      if (caixaDicaRevelada) {
-        caixaDicaRevelada.classList.remove("hidden");
-      }
+    }
+
+    if (caixaDicaRevelada) {
+      caixaDicaRevelada.classList.remove("hidden");
+      caixaDicaRevelada.style.display = "flex";
+      caixaDicaRevelada.classList.add("revealing-gold");
     }
 
     if (badgeStatusDica) {
-      badgeStatusDica.textContent = "2/2 Consenso Atingido";
+      badgeStatusDica.textContent = "2/2 Dica Revelada";
       badgeStatusDica.className = "hint-consensus-badge consensus-reached";
     }
 
-    if (textoBtnDica) {
-      textoBtnDica.textContent = "💡 Dica Revelada (2/2)";
+    if (botaoDica) {
+      botaoDica.style.display = "none";
+      botaoDica.disabled = true;
     }
-    botaoDica.disabled = true;
-    botaoDica.style.display = "none";
 
     if (textoDica) {
-      textoDica.hidden = false;
-      textoDica.innerHTML = `<span>Dica: <strong>${estado.hint || "Palavra especial"}</strong></span>`;
+      textoDica.removeAttribute("hidden");
+      textoDica.style.display = "block";
+      textoDica.innerHTML = `<span>Dica: <strong style="color: #ffffff; font-weight: 800;">${hintText}</strong></span>`;
     }
 
     if (descDica) {
-      descDica.textContent = "Consenso atingido (2/2)! Dica secreta liberada para ambos os jogadores.";
+      descDica.style.display = "block";
+      descDica.innerHTML = `💡 <strong>DICA LIBERADA (2/2):</strong> <span style="color: #fef08a; font-weight: 700;">${hintText}</span>`;
     }
   } else {
     hintJaRevelada = false;
     if (caixaDicaRevelada) {
       caixaDicaRevelada.classList.add("hidden");
+      caixaDicaRevelada.style.display = "none";
       caixaDicaRevelada.classList.remove("revealing-gold");
     }
     if (textoDica) {
       textoDica.hidden = true;
     }
-    botaoDica.style.display = "inline-flex";
+    if (botaoDica) {
+      botaoDica.style.display = "inline-flex";
+    }
 
     if (hintCount === 0) {
       if (badgeStatusDica) {
         badgeStatusDica.textContent = "0/2 Votos";
         badgeStatusDica.className = "hint-consensus-badge";
       }
-      botaoDica.className = "hint-consensus-btn";
+      if (botaoDica) {
+        botaoDica.className = "hint-consensus-btn";
+        botaoDica.disabled = estado.status !== "playing";
+      }
       if (textoBtnDica) textoBtnDica.textContent = "Pedir Dica (0/2)";
-      botaoDica.disabled = estado.status !== "playing";
       if (descDica) {
         descDica.textContent = "Ambos os jogadores devem pedir a dica para que ela seja revelada sem penalidades.";
       }
@@ -765,9 +786,11 @@ function renderizarDicaConsenso(estado) {
         badgeStatusDica.textContent = "1/2 Votos";
         badgeStatusDica.className = "hint-consensus-badge waiting-vote";
       }
-      botaoDica.className = "hint-consensus-btn waiting-pulse";
+      if (botaoDica) {
+        botaoDica.className = "hint-consensus-btn waiting-pulse";
+        botaoDica.disabled = true;
+      }
       if (textoBtnDica) textoBtnDica.textContent = "Você votou! Aguardando oponente (1/2)";
-      botaoDica.disabled = true;
       if (descDica) {
         descDica.textContent = "Seu voto foi registrado! Aguardando o adversário aceitar a dica.";
       }
@@ -776,9 +799,11 @@ function renderizarDicaConsenso(estado) {
         badgeStatusDica.textContent = "1/2 Votos";
         badgeStatusDica.className = "hint-consensus-badge pending-action";
       }
-      botaoDica.className = "hint-consensus-btn accept-glow";
+      if (botaoDica) {
+        botaoDica.className = "hint-consensus-btn accept-glow";
+        botaoDica.disabled = estado.status !== "playing";
+      }
       if (textoBtnDica) textoBtnDica.textContent = "Oponente pediu a dica! Clique para aceitar (1/2)";
-      botaoDica.disabled = estado.status !== "playing";
       if (descDica) {
         descDica.textContent = "Seu adversário quer ver a dica! Clique no botão para conceder consenso mútuo.";
       }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forca Distribuída | Arena de Combate 1v1</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/style.css?v=2.2" />
   </head>
   <body>
     <!-- Screen Shake Wrapper / Screen Vignette -->
@@ -102,45 +102,48 @@
           </div>
         </div>
 
-        <!-- Secret Word & Wrong Letters Row -->
-        <div class="status-grid">
-          <!-- Word Tile Card -->
-          <div class="word-box-card">
-            <div class="word-card-label">Palavra Secreta</div>
-            
-            <div class="word-tiles" id="masked-word" aria-label="Palavra secreta">
-              <span class="letter-tile blank"></span>
-              <span class="letter-tile blank"></span>
-              <span class="letter-tile blank"></span>
-              <span class="letter-tile blank"></span>
-              <span class="letter-tile blank"></span>
-            </div>
+        <!-- Secret Word Arena: Full-width for maximum clarity and long words -->
+        <div class="word-box-card word-box-fullwidth">
+          <div class="word-card-header">
+            <span class="word-card-label">Palavra Secreta</span>
+            <span class="word-length-counter" id="word-length-counter"></span>
+          </div>
+          
+          <div class="word-tiles" id="masked-word" aria-label="Palavra secreta">
+            <span class="letter-tile blank"></span>
+            <span class="letter-tile blank"></span>
+            <span class="letter-tile blank"></span>
+            <span class="letter-tile blank"></span>
+            <span class="letter-tile blank"></span>
+          </div>
+        </div>
 
-            <!-- Hint Consensus 2/2 Box -->
-            <div class="hint-consensus-card" id="hint-consensus-card">
-              <div class="hint-consensus-header">
-                <div class="hint-consensus-title">
-                  <span class="hint-pulse-dot"></span>
-                  <span>💡 DICA SECRETA (Consenso Mútuo 2/2)</span>
-                </div>
-                <span class="hint-consensus-badge" id="hint-status-badge">0/2 Votos</span>
+        <!-- Hint Consensus Card & Wrong Letters Grid -->
+        <div class="status-grid">
+          <!-- Hint Consensus 2/2 Box -->
+          <div class="hint-consensus-card" id="hint-consensus-card">
+            <div class="hint-consensus-header">
+              <div class="hint-consensus-title">
+                <span class="hint-pulse-dot"></span>
+                <span>💡 DICA SECRETA (Consenso Mútuo 2/2)</span>
               </div>
-              <div class="hint-consensus-body">
-                <p class="hint-consensus-desc" id="hint-consensus-desc">
-                  Ambos os jogadores devem solicitar a dica para que ela seja revelada sem penalidades.
-                </p>
-                <button type="button" class="hint-consensus-btn" id="hint-toggle">
-                  <span class="hint-btn-icon">💡</span>
-                  <span id="hint-btn-text">Pedir Dica (0/2)</span>
-                </button>
-              </div>
-              <div class="hint-revealed-box hidden" id="hint-revealed-box">
-                <div class="hint-gold-glow"></div>
-                <div class="hint-revealed-content">
-                  <span class="hint-sparkle">✨</span>
-                  <div class="hint-pill" id="hint">
-                    <span>Dica: aguardando dados da partida.</span>
-                  </div>
+              <span class="hint-consensus-badge" id="hint-status-badge">0/2 Votos</span>
+            </div>
+            <div class="hint-consensus-body">
+              <p class="hint-consensus-desc" id="hint-consensus-desc">
+                Ambos os jogadores devem solicitar a dica para que ela seja revelada sem penalidades.
+              </p>
+              <button type="button" class="hint-consensus-btn" id="hint-toggle">
+                <span class="hint-btn-icon">💡</span>
+                <span id="hint-btn-text">Pedir Dica (0/2)</span>
+              </button>
+            </div>
+            <div class="hint-revealed-box hidden" id="hint-revealed-box">
+              <div class="hint-gold-glow"></div>
+              <div class="hint-revealed-content">
+                <span class="hint-sparkle">✨</span>
+                <div class="hint-pill" id="hint">
+                  <span>Dica: aguardando dados da partida.</span>
                 </div>
               </div>
             </div>
@@ -415,6 +418,6 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/game.js"></script>
+    <script src="/game.js?v=2.2"></script>
   </body>
 </html>

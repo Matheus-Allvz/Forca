@@ -24,7 +24,15 @@ const caminhoRanking = process.env.RANKING_FILE || path.resolve(__dirname, "./da
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../web-client/public")));
+app.use(express.static(path.join(__dirname, "../web-client/public"), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".html") || filePath.endsWith(".js") || filePath.endsWith(".css")) {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }
+}));
 
 const CLUSTER_SECRET = process.env.CLUSTER_SECRET || "forca-internal-secret-2026";
 function verificarTokenInterno(req, res, next) {
